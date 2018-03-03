@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html>
+    <!-- title -->
+
+
+
+
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+    <title>[译文]Spring Boot and JavaFX · XShandow&#39;s Studio</title>
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        height: 50vh;
+        overflow: hidden;
+        box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s 1;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+</style>
+
+    <link rel="preload" href= /css/style.css?v=20180228 as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180228 media="(max-width: 980px)"/>
+    <link rel="icon" href= /assets/favicon.ico>
+    <script>
+  // load webfont-loader async, and add callback function
+  function async(u, c) {
+    var d = document, t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0];
+    o.src = u;
+    if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+    s.parentNode.insertBefore(o, s);
+  }
+  
+  // get user agent
+  var browser = {
+    versions: function () {
+      var u = window.navigator.userAgent;
+      return {
+        userAgent: u,
+        trident: u.indexOf('Trident') > -1, //IE内核
+        presto: u.indexOf('Presto') > -1, //opera内核
+        webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+        gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+        mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+        ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+        android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+        iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+        iPad: u.indexOf('iPad') > -1, //是否为iPad
+        webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+        weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+        uc: u.indexOf('UCBrowser') > -1 //是否为android下的UC浏览器
+      };
+    }()
+  }
+  console.log("userAgent:" + browser.versions.userAgent);
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded');
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document.getElementsByClassName('intro-title')[0].classList.add('intro-fade-in');
+      document.getElementsByClassName('intro-subtitle')[0].classList.add('intro-fade-in');
+      var postIntroTags = document.getElementsByClassName('post-intro-tags')[0],
+        postIntroMeat = document.getElementsByClassName('post-intro-meta')[0];
+      if (postIntroTags) {
+        postIntroTags.classList.add('post-fade-in');
+      }
+      if (postIntroMeat) {
+        postIntroMeat.classList.add('post-fade-in');
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb(){
+    if (browser.versions.uc) {
+      console.log("UCBrowser");
+      fontLoaded();
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular']
+        },
+        loading: function () {  //所有字体开始加载
+          // console.log('loading');
+        },
+        active: function () {  //所有字体已渲染
+          fontLoaded();
+        },
+        inactive: function () { //字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout');
+          fontLoaded();
+        },
+        timeout: 5000 // Set the timeout to two seconds
+      });
+    }
+  }
+
+  async("https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js", asyncCb)
+</script>
+    <script>
+        (function (w) {
+            "use strict";
+            // rel=preload support test
+            if (!w.loadCSS) {
+                w.loadCSS = function () { };
+            }
+            // define on the loadCSS obj
+            var rp = loadCSS.relpreload = {};
+            // rel=preload feature support test
+            // runs once and returns a function for compat purposes
+            rp.support = (function () {
+                var ret;
+                try {
+                    ret = w.document.createElement("link").relList.supports("preload");
+                } catch (e) {
+                    ret = false;
+                }
+                return function () {
+                    return ret;
+                };
+            })();
+
+            // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+            // then change that media back to its intended value on load
+            rp.bindMediaToggle = function (link) {
+                // remember existing media attr for ultimate state, or default to 'all'
+                var finalMedia = link.media || "all";
+
+                function enableStylesheet() {
+                    link.media = finalMedia;
+                }
+
+                // bind load handlers to enable media
+                if (link.addEventListener) {
+                    link.addEventListener("load", enableStylesheet);
+                } else if (link.attachEvent) {
+                    link.attachEvent("onload", enableStylesheet);
+                }
+
+                // Set rel and non-applicable media type to start an async request
+                // note: timeout allows this to happen async to let rendering continue in IE
+                setTimeout(function () {
+                    link.rel = "stylesheet";
+                    link.media = "only x";
+                });
+                // also enable media after 3 seconds,
+                // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+                setTimeout(enableStylesheet, 3000);
+            };
+
+            // loop through link elements in DOM
+            rp.poly = function () {
+                // double check this to prevent external calls from running
+                if (rp.support()) {
+                    return;
+                }
+                var links = w.document.getElementsByTagName("link");
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    // qualify links to those with rel=preload and as=style attrs
+                    if (link.rel === "preload" && link.getAttribute("as") === "style" && !link.getAttribute("data-loadcss")) {
+                        // prevent rerunning on link
+                        link.setAttribute("data-loadcss", true);
+                        // bind listeners to toggle media back
+                        rp.bindMediaToggle(link);
+                    }
+                }
+            };
+
+            // if unsupported, run the polyfill
+            if (!rp.support()) {
+                // run once at least
+                rp.poly();
+
+                // rerun poly on an interval until onload
+                var run = w.setInterval(rp.poly, 500);
+                if (w.addEventListener) {
+                    w.addEventListener("load", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                } else if (w.attachEvent) {
+                    w.attachEvent("onload", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                }
+            }
+            // commonjs
+            if (typeof exports !== "undefined") {
+                exports.loadCSS = loadCSS;
+            }
+            else {
+                w.loadCSS = loadCSS;
+            }
+        }(typeof global !== "undefined" ? global : this));
+    </script>
+    <script src="//cdn.staticfile.org/jquery/3.2.1/jquery.min.js" defer></script>
+    <script src="/scripts/main.js" defer></script>
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+</head>
+
+    
+        <body class="post-body">
+    
+    
+<header class="header">
+
+    <div class="read-progress"></div>
+    <div class="header-sidebar-menu">&#xe775;</div>
+    <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译文]Spring Boot and JavaFX</a>
+            </div>
+    </div>
+    
+    <a class="home-link" href=/>XShandow's Studio</a>
+</header>
+    <div class="wrapper">
+        <div class="site-intro">
+    
+    <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
+            
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+            [译文]Spring Boot and JavaFX
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+            
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = JavaFX>JavaFX</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/03</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
+        
+    </div>
+</div>
+        <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+
+        <div class="container container-unloaded">
+            <main class="main post-page">
+    <article class="article-entry">
+        <h1 id="【译】Spring-Boot-and-JavaFx8"><a href="#【译】Spring-Boot-and-JavaFx8" class="headerlink" title="【译】Spring Boot and JavaFx8"></a>【译】Spring Boot and JavaFx8</h1><p><a href="https://www.felixroske.de/page/programmierung/index.html" title="Spring Boot and JavaFx8" target="_blank" rel="noopener">原文连接</a></p>
+<p>JavaFX是一个Java的新式库，以一种使用FXML的声明方式去编写漂亮的前端。因为理想的情况下，你代码中视图和逻辑应该有严格的分隔。但是在简单的FXML中写GUI是丑陋的、容易出错的。我们希望使用工具，能让我们立即看到我们的界面是什么样子，并且允许我们通过拖拽、移动和对齐元素来简单地构建图形用户界面。Scene Builder就是这样的工具（注：Intellij2017已经集成）。另一方面，我们希望代码使用Spring给我们提供的伟大的花哨的组件。在过去，使用两者一起工作并不容易。需要去写大量的公式化代码。<a href="https://github.com/roskenet/springboot-javafx-support" target="_blank" rel="noopener">springboot-javafx-support库</a>将两者结合在一起用Java编写现代化的前端应用。这篇教程不包括介绍JavaFX或者scene builder的特性。你可以在其他地方找到大量关于JavaFX的优秀书籍。接下来的例子集中在如何使用springboot-javafx-support。接下来是具体实现步骤：</p>
+<h2 id="PartⅠ：Hello-World"><a href="#PartⅠ：Hello-World" class="headerlink" title="PartⅠ：Hello World"></a>PartⅠ：Hello World</h2><p>让我们以简单的HelloWorld应用开始。方便起见，你可以在<a href="https://github.com/roskenet/spring-javafx-examples" target="_blank" rel="noopener">这</a>找到教程中完整的代码。</p>
+<h3 id="项目准备"><a href="#项目准备" class="headerlink" title="项目准备"></a>项目准备</h3><p>首先，创建一个标准的maven工程，并且在pom.xml添加必要的依赖。如下：(注：原文中使用springboot-1.5.2)</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;
+ xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+ xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+    &lt;groupId&gt;com.kitool&lt;/groupId&gt;
+    &lt;artifactId&gt;KiTool&lt;/artifactId&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+
+
+    &lt;parent&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+        &lt;version&gt;2.0.0.M6&lt;/version&gt;
+    &lt;/parent&gt;
+
+    &lt;properties&gt;
+        &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;
+        &lt;java.version&gt;1.8&lt;/java.version&gt;
+        &lt;springboot-javafx.version&gt;2.1.5&lt;/springboot-javafx.version&gt;
+    &lt;/properties&gt;
+
+    &lt;!-- Add Spring repositories --&gt;
+    &lt;!-- (you don&apos;t need this if you are using a .RELEASE version) --&gt;
+    &lt;repositories&gt;
+        &lt;repository&gt;
+            &lt;id&gt;spring-snapshots&lt;/id&gt;
+            &lt;url&gt;http://repo.spring.io/snapshot&lt;/url&gt;
+            &lt;snapshots&gt;
+            &lt;enabled&gt;true&lt;/enabled&gt;
+            &lt;/snapshots&gt;
+        &lt;/repository&gt;
+        &lt;repository&gt;
+            &lt;id&gt;spring-milestones&lt;/id&gt;
+            &lt;url&gt;http://repo.spring.io/milestone&lt;/url&gt;
+        &lt;/repository&gt;
+    &lt;/repositories&gt;
+
+    &lt;pluginRepositories&gt;
+        &lt;pluginRepository&gt;
+            &lt;id&gt;spring-snapshots&lt;/id&gt;
+            &lt;url&gt;http://repo.spring.io/snapshot&lt;/url&gt;
+        &lt;/pluginRepository&gt;
+        &lt;pluginRepository&gt;
+            &lt;id&gt;spring-milestones&lt;/id&gt;
+            &lt;url&gt;http://repo.spring.io/milestone&lt;/url&gt;
+        &lt;/pluginRepository&gt;
+    &lt;/pluginRepositories&gt;
+
+
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+
+        &lt;dependency&gt;
+            &lt;groupId&gt;de.roskenet&lt;/groupId&gt;
+            &lt;artifactId&gt;springboot-javafx-support&lt;/artifactId&gt;
+            &lt;version&gt;${springboot-javafx.version}&lt;/version&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+
+    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+                &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;
+
+&lt;/project&gt;
+</code></pre><h3 id="创建视图"><a href="#创建视图" class="headerlink" title="创建视图"></a>创建视图</h3><p>如果还没有创建，从<a href="http://www.oracle.com/technetwork/java/javase/downloads/javafxscenebuilder-info-2157684.html" target="_blank" rel="noopener">Oracle官网</a>下载SceneBuilder并且运行。现在我们会创建一个Pane,包含welcome文字的Label。让你的文字稍大一点，使用你喜欢的样式。我们将这个面板保存到工程的src/main/resources/example/helloworld.fxml。<br><img src="https://www.felixroske.de/static/img/hw1.png" alt=""></p>
+<h3 id="注册视图"><a href="#注册视图" class="headerlink" title="注册视图"></a>注册视图</h3><p>现在，我们创建一个代表视图的Java类，这个类会为我们展现FXML的魔力。更重要的是：这个类是一个真正的Spring bean类。</p>
+<p>创建名为HelloworldView的类，继承AbstractFxmlView，并使用@FXMLView声明。</p>
+<p>你的类类似于：</p>
+<pre><code>package example;
+
+import de.felixroske.jfxsupport.AbstractFxmlView;
+import de.felixroske.jfxsupport.FXMLView;
+
+@FXMLView
+public class HelloworldView extends AbstractFxmlView {
+
+}
+</code></pre><h3 id="创建启动类"><a href="#创建启动类" class="headerlink" title="创建启动类"></a>创建启动类</h3><p>最后，我们需要创建一个SpringBoot的启动类。</p>
+<p>就这么简单：</p>
+<pre><code>package example;
+
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import de.felixroske.jfxsupport.AbstractJavaFxApplicationSupport;
+
+@SpringBootApplication
+public class Main extends AbstractJavaFxApplicationSupport{
+
+    public static void main(String[] args) {
+        launchApp(Main.class, HelloworldView.class, args);
+    }
+}
+</code></pre><p>启动你的app…</p>
+<h2 id="Part-Ⅱ：交互"><a href="#Part-Ⅱ：交互" class="headerlink" title="Part Ⅱ：交互"></a>Part Ⅱ：交互</h2><p>O.K.现在我们知道如何连接FXML文件和视图类了。现在让我们看一下用户如何与我们的app交互。你发现spring-javfx-examples库中prat_2示例代码。</p>
+<p>在SceneBuilder中再次打开helloworld.fxml，添加编辑框（Text filed）和一个按钮（button）。为每一个元素添加一个ID，并且添加controller类。</p>
+<p><img src="https://www.felixroske.de/static/img/hw2.png" alt=""></p>
+<h3 id="添加controller"><a href="#添加controller" class="headerlink" title="添加controller"></a>添加controller</h3><p>现在我们实现controller类，这个类会响应HelloworldView。除了@FXMLController声明，这就是一个见到那的Java和JavaFX代码。最终如下所示：</p>
+<pre><code>package example;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import de.felixroske.jfxsupport.FXMLController;
+import javafx.event.Event;
+import javafx.fxml.FXML;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+
+@FXMLController
+public class HelloworldController {
+
+    @FXML
+    private Label helloLabel;
+
+    @FXML
+    private TextField nameField;
+
+    // Be aware: This is a Spring bean. So we can do the following:
+    @Autowired
+    private AwesomeActionService actionService;
+
+    @FXML
+    private void setHelloText(final Event event) {
+         final String textToBeShown = actionService.processName(nameField.getText());
+         helloLabel.setText(textToBeShown); 
+    }
+}
+</code></pre><p>如你所见，我们在ApplicationContext容器中使用AwesomeActionService类型的bean。因为controller类也是一个Spring bean，我们可以简单的自动注入（autowire ）。如果你在scennebuilder中使用正确的ID,正确的添加了controller类（看一下helloworld.fxml），然后label会变得交互。</p>
+<h2 id="Part-Ⅲ：视图样式"><a href="#Part-Ⅲ：视图样式" class="headerlink" title="Part Ⅲ：视图样式"></a>Part Ⅲ：视图样式</h2><p>在这一章中，我们希望在我们的视图中应用样式表。你可以在part_3中找到示例代码。总体上，样式由JavaFX完成。你简单地通过scenebuiler为你的视图添加css文件，像我在示例中使用global.css一样。</p>
+<h3 id="添加每个视图样式"><a href="#添加每个视图样式" class="headerlink" title="添加每个视图样式"></a>添加每个视图样式</h3><p>为了你更方便地应用样式，你可以通过添加.css文件添加额外的样式，<strong>css文件名和fxml文件名一致</strong>。示例中helloworld.css会北自动加载。</p>
+<p>第三种方式，为@FXMLView声明提供一个样式表数组（没有在示例中展示）。仅添加 @FXMLView(css={“/css/myspecialstyle.css”})。</p>
+<h2 id="Part-Ⅳ：i18n"><a href="#Part-Ⅳ：i18n" class="headerlink" title="Part Ⅳ：i18n"></a>Part Ⅳ：i18n</h2><h3 id="资源绑定"><a href="#资源绑定" class="headerlink" title="资源绑定"></a>资源绑定</h3><p>在part_4，我们希望为视图添加国际化（i8n)。这很容易，通过@FXMLView声明bundle参数,然后在scenebuilder中修改你的fxml文件。<br><img src="https://www.felixroske.de/static/img/hw3.png" alt=""></p>
+<pre><code>@FXMLView(bundle=&quot;example.helloworld&quot;)
+public class HelloworldView extends AbstractFxmlView {
+
+}
+</code></pre><p>其他的东西就是普通的JavaFX内容：创建名为/src/main/resources/example/helloworld.properties和/src/main/resources/example/helloworld_de.properties的资源文件。德语的如下：</p>
+<pre><code>hello=Hallo
+greeting=Hallo {0}!
+go=Los!
+</code></pre><p>最后就是当以LC_ALL=de_DE.UTF-8启动的时候让helloworld显示德语。如下：<br><img src="https://www.felixroske.de/static/img/hw4.png" alt=""></p>
+<h2 id="Part-Ⅴ-测试"><a href="#Part-Ⅴ-测试" class="headerlink" title="Part Ⅴ:测试"></a>Part Ⅴ:测试</h2><p>这一部分是关于测试我们的view/controller的逻辑。这不是springboot-javafx-support的特性，但是有时建立一个GUI测试环境会很麻烦。springboot-javafx-test提供所有必要的依赖，以及GuiTest类帮助你测试你的app。它提供testfx和单片。你可以在part_5中找到教程中的代码。</p>
+<h3 id="测试视图"><a href="#测试视图" class="headerlink" title="测试视图"></a>测试视图</h3><p>在pom.xml中添加测试域的依赖，如下：</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;de.roskenet&lt;/groupId&gt;
+    &lt;artifactId&gt;springboot-javafx-test&lt;/artifactId&gt;
+    &lt;version&gt;0.0.4&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;
+</code></pre><p>现在我们为HelloworldView和HelloworldController类写一个简短的测试，这两个类在part_2中写过。当输入字符串“Anton”时，Label内容会变成“Hello Anton!”，别的字符串会显示“Hello Unknow Stranger!”。添加HelloworldViewTest：</p>
+<pre><code>package example;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
+import javax.annotation.PostConstruct;
+
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import de.roskenet.jfxsupport.test.GuiTest;
+import javafx.application.Platform;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class HelloworldViewTest extends GuiTest {
+
+    @PostConstruct
+    public void constructView() throws Exception {
+        init(HelloworldView.class);
+    }
+
+    @Test
+    public void testClickButton_Anton() {
+        clickOn(&quot;#nameField&quot;)
+        .write(&quot;Anton&quot;)
+        .clickOn(&quot;#helloButton&quot;);
+
+        assertThat(labelText(), is(&quot;Hello Anton!&quot;));
+    }
+
+    @Test
+    public void testClickButton_Berta() {
+        clickOn(&quot;#nameField&quot;)
+        .write(&quot;Berta&quot;)
+        .clickOn(&quot;#helloButton&quot;);
+
+        assertThat(labelText(), is(&quot;Hello Unknown Stranger!&quot;));
+        }
+
+        private String labelText() {
+        return ((Label) find(&quot;#helloLabel&quot;)).getText();
+    }
+
+    @After
+    public void resetValues() {
+        // You are responsible for cleaning up your Beans!
+        Platform.runLater(() -&gt; {
+        TextField helloLabel = (TextField) find(&quot;#nameField&quot;);
+        helloLabel.setText(&quot;&quot;);
+        });
+    }
+
+}
+</code></pre><p>TestFX拥有简单的API，你可以连接行为和操作。由两件事情你需要知道：第一是类集成于GuiTest,第二是有一个方法以@PostConstruct声明。这里我们通过要测试的视图调用GuiTest::init。(init is overloaded.)当你需要直接访问你的视图中的字段或方法时，你可以使用@Autowire自动注入你的视图类，并且调用实例的init.(查看HelloworldView2Test)。启动测试，你可以看到TestFX和应用启动。</p>
+<h3 id="Headless模式测试"><a href="#Headless模式测试" class="headerlink" title="Headless模式测试"></a>Headless模式测试</h3><p>我们需要解决的最后一个问题是，我们测测试不会在持续集成环境中运行，像X-server或者Windows我们没有一个运行用户界面。我们需要在Headless模式下运行测试。没有问题：设置一个环境变量JAVAFX_HEADLESS=true，然后你的测试会在没有屏幕的情况下默默的运行。</p>
+<h2 id="Part-Ⅵ：先进技术"><a href="#Part-Ⅵ：先进技术" class="headerlink" title="Part Ⅵ：先进技术"></a>Part Ⅵ：先进技术</h2><h3 id="使用Java代码"><a href="#使用Java代码" class="headerlink" title="使用Java代码"></a>使用Java代码</h3><p>有时候你甚至希望通过优质的老的Java代码来创建你的视图。这只需要通过重写AbstractFxmlView中的getView方法来返回一个Node,像我在示例part_6_1中那样。</p>
+<pre><code>@FXMLView
+public class HelloworldJavaView extends AbstractFxmlView {
+
+    private Pane myJavaCodedPane;
+
+    public HelloworldJavaView() {
+       Pane pane = new Pane();
+       Button button = new Button(&quot;A Button&quot;);
+
+       pane.getChildren().add(button);
+       myJavaCodedPane = pane;
+    }
+
+    @Override
+    public Parent getView() {
+       return myJavaCodedPane;
+    }
+}
+</code></pre><p><strong>注意：</strong>为了获得最大的灵活性，可能你甚至会首先调用super.getView()，然后通过单纯的Java代码修改你使用FXML生成的视图。</p>
+<h3 id="修改视图"><a href="#修改视图" class="headerlink" title="修改视图"></a>修改视图</h3><p>当你想改变你的场景，你只需要简单地调用你应用中showView方法，如part_6_2中所示。为了让示例尽可能的小，这里两个视图使用同一个controller类。</p>
+<pre><code>@FXMLController
+public class ViewController {
+
+    public void showFirstView(Event event) {
+        Main.showView(FirstView.class);
+    }
+
+    public void showSecondView(Event event) {
+        Main.showView(SecondView.class);
+    }
+}
+</code></pre><p>顺便说一下：你可以通过调用静态取值方法MyApp.getStage()和MyApp.getScene()分别获取你的JavaFX的Stage 和Scene对象。</p>
+<h3 id="配置选项"><a href="#配置选项" class="headerlink" title="配置选项"></a>配置选项</h3><p>从版本1.3.11开始，你可以通过javafx.*properties设置你的主stage中很多东西。默认情况下，这个库提供一组不同大小的图标。添加一组你自己的应用logo到src/main/resources，并且通过在application.yaml或application.properties.中添加让库知道它们的存在。如果需要，通过如下方式为应用添加默认的标题和配置初始stage：</p>
+<pre><code>javafx:
+    title: My cool Application
+    appicons:
+        - /appicon1.png
+        - /appicon2.png
+        - /appicon3.png
+    stage:
+        width: 400 # defaults to the size of the scene
+        height: 300
+        resizable: false # defaults to true
+        style: utility # defaults to DECORATED see: javafx.stage.StageStyle
+</code></pre><p>JavaFX自动决定图标的大小，并且根据输出设备使用最佳解决方案。</p>
+<h3 id="定制启动界面"><a href="#定制启动界面" class="headerlink" title="定制启动界面"></a>定制启动界面</h3><p>你可以继承SplashScreen并调用launchApp(Main.class, HelloworldView.class, mySplashScreen, args)来定制启动界面。</p>
+
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/Hexo Problem.html" title= Hexo安装踩坑记录 >
+                    <div class="nextTitle">Hexo安装踩坑记录</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
+    
+    
+    <!--PC版-->
+
+    <!--PC版-->
+
+
+    
+    <!-- 评论 -->
+</main>
+            <!-- profile -->
+            
+        </div>
+        <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+    <div class="social">
+        
+    
+        
+            
+                <a href="mailto:978650866@qq.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/XShandow" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+    </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- 不蒜子  -->
+    
+    <div class="busuanzi-container">
+        <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span>
+        </span>
+    </div>
+    
+</footer>
+    </div>
+    <!-- toc -->
+    
+    <div class="toc-wrapper">
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#【译】Spring-Boot-and-JavaFx8"><span class="toc-number">1.</span> <span class="toc-text">【译】Spring Boot and JavaFx8</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#PartⅠ：Hello-World"><span class="toc-number">1.1.</span> <span class="toc-text">PartⅠ：Hello World</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#项目准备"><span class="toc-number">1.1.1.</span> <span class="toc-text">项目准备</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建视图"><span class="toc-number">1.1.2.</span> <span class="toc-text">创建视图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#注册视图"><span class="toc-number">1.1.3.</span> <span class="toc-text">注册视图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建启动类"><span class="toc-number">1.1.4.</span> <span class="toc-text">创建启动类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-Ⅱ：交互"><span class="toc-number">1.2.</span> <span class="toc-text">Part Ⅱ：交互</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#添加controller"><span class="toc-number">1.2.1.</span> <span class="toc-text">添加controller</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-Ⅲ：视图样式"><span class="toc-number">1.3.</span> <span class="toc-text">Part Ⅲ：视图样式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#添加每个视图样式"><span class="toc-number">1.3.1.</span> <span class="toc-text">添加每个视图样式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-Ⅳ：i18n"><span class="toc-number">1.4.</span> <span class="toc-text">Part Ⅳ：i18n</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#资源绑定"><span class="toc-number">1.4.1.</span> <span class="toc-text">资源绑定</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-Ⅴ-测试"><span class="toc-number">1.5.</span> <span class="toc-text">Part Ⅴ:测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#测试视图"><span class="toc-number">1.5.1.</span> <span class="toc-text">测试视图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Headless模式测试"><span class="toc-number">1.5.2.</span> <span class="toc-text">Headless模式测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-Ⅵ：先进技术"><span class="toc-number">1.6.</span> <span class="toc-text">Part Ⅵ：先进技术</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#使用Java代码"><span class="toc-number">1.6.1.</span> <span class="toc-text">使用Java代码</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#修改视图"><span class="toc-number">1.6.2.</span> <span class="toc-text">修改视图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置选项"><span class="toc-number">1.6.3.</span> <span class="toc-text">配置选项</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#定制启动界面"><span class="toc-number">1.6.4.</span> <span class="toc-text">定制启动界面</span></a></li></ol></li></ol></li></ol>
+    </div>
+    
+    <div class="back-top iconfont-archer">&#xe639;</div>
+    <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+          <div class="sidebar-panel-archives">
+    <!-- 在ejs中将archive按照时间排序 -->
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div class="total-archive"> Total : 2 </div>
+    
+    <div class="post-archive">
+    
+    
+    
+    
+    <div class="archive-year"> 2018 </div>
+    <ul class="year-list">
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring-Boot-and-JavaFX8.html" >[译文]Spring Boot and JavaFX</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Hexo Problem.html" >Hexo安装踩坑记录</a>
+        </li>
+    
+    </div>
+  </div>
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+    
+        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
+    
+        <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+    缺失模块。<br/>
+    1、请确保node版本大于6.2<br/>
+    2、在博客根目录（注意不是archer根目录）执行以下命令：<br/>
+    <span style="color: #f75357; font-size: 1rem; line-height: 2rem;">npm i hexo-generator-json-content --save</span><br/>
+    3、在根目录_config.yml里添加配置：
+    <pre style="color: #787878; font-size: 0.6rem;">
+jsonContent:
+  meta: false
+  pages: false
+  posts:
+    title: true
+    date: true
+    path: true
+    text: false
+    raw: false
+    content: false
+    slug: false
+    updated: false
+    comments: false
+    link: false
+    permalink: false
+    excerpt: false
+    categories: true
+    tags: true</pre>
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
+    
+        <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+    </div>
+</div> 
+    <script>
+    var siteMeta = {
+        root: '/',
+        author: 'XShandow'
+    }
+</script>
+    <!-- busuanzi  -->
+    
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+    <!-- CNZZ  -->
+    
+    </div>
+    <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
+    
+    </body>
+</html>
+
+
