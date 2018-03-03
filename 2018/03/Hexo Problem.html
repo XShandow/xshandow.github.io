@@ -343,20 +343,32 @@
 <pre><code>npm install -g hexo-cli --registry=http://registry.npm.taobao.org
 </code></pre><p>为了避免每次安装都需要–registry参数，可以使用如下命令进行永久设置：</p>
 <pre><code>npm config set registry http://registry.npm.taobao.org
-</code></pre><h2 id="B-Git-clone文件后执行hexo提示命令不存在"><a href="#B-Git-clone文件后执行hexo提示命令不存在" class="headerlink" title="B:Git clone文件后执行hexo提示命令不存在"></a>B:Git clone文件后执行hexo提示命令不存在</h2><p>需要在hexo目录下执行hexo install命令。我已经将命令写到_install.bat</p>
+</code></pre><h2 id="B-Git-clone文件后执行hexo提示命令不存在"><a href="#B-Git-clone文件后执行hexo提示命令不存在" class="headerlink" title="B: Git clone文件后执行hexo提示命令不存在"></a>B: Git clone文件后执行hexo提示命令不存在</h2><p>需要在hexo目录下执行hexo install命令。我已经将命令写到_install.bat</p>
+<h2 id="C-YAML格式Front-matter无法解析"><a href="#C-YAML格式Front-matter无法解析" class="headerlink" title="C: YAML格式Front-matter无法解析"></a>C: YAML格式Front-matter无法解析</h2><p>可以使用JSON Front-matter格式：</p>
+<pre><code>---
+{
+&quot;title&quot;: &quot;Hexo安装踩坑记录&quot;,
+&quot;date&quot;: {{ date }},
+&quot;categories&quot;: &quot;生活&quot;,    
+&quot;tags&quot;: &quot;测评&quot;,     
+&quot;comments&quot;: true,     
+&quot;description&quot;: &quot;Springboot-javafx-support库的使用教程&quot;
+}
+---
+</code></pre><h2 id="D：发布到Github上面"><a href="#D：发布到Github上面" class="headerlink" title="D：发布到Github上面"></a>D：发布到Github上面</h2><p>参考官方文档，但是有时候https://…git无法部署成功。使用git@..地址。需要在Github上设置SSH。</p>
 
     </article>
     <!-- 前后页  -->
     <ul class="post-paginator">
         <li class="next">
             
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/Spring-Boot-and-JavaFX8.html" title= [译文]Spring Boot and JavaFX >
+                    <div class="nextTitle">[译文]Spring Boot and JavaFX</div>
+                </a>
+            
         </li>
         <li class="previous">
-            
-                <div class="prevSlogan">Previous Post</div>
-                <a href= "/2018/03/Spring-Boot-and-JavaFX8.html" title= [译文]Spring Boot and JavaFX >
-                    <div class="prevTitle">[译文]Spring Boot and JavaFX</div>
-                </a>
             
         </li>
     </ul>
@@ -449,7 +461,7 @@
         <div class="toc-catalog">
             <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
         </div>
-        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Hexo-安装过程中遇到的坑"><span class="toc-number">1.</span> <span class="toc-text">Hexo 安装过程中遇到的坑</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#A：国内安装npm安装缓慢"><span class="toc-number">1.1.</span> <span class="toc-text">A：国内安装npm安装缓慢</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#B-Git-clone文件后执行hexo提示命令不存在"><span class="toc-number">1.2.</span> <span class="toc-text">B:Git clone文件后执行hexo提示命令不存在</span></a></li></ol></li></ol>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Hexo-安装过程中遇到的坑"><span class="toc-number">1.</span> <span class="toc-text">Hexo 安装过程中遇到的坑</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#A：国内安装npm安装缓慢"><span class="toc-number">1.1.</span> <span class="toc-text">A：国内安装npm安装缓慢</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#B-Git-clone文件后执行hexo提示命令不存在"><span class="toc-number">1.2.</span> <span class="toc-text">B: Git clone文件后执行hexo提示命令不存在</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#C-YAML格式Front-matter无法解析"><span class="toc-number">1.3.</span> <span class="toc-text">C: YAML格式Front-matter无法解析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#D：发布到Github上面"><span class="toc-number">1.4.</span> <span class="toc-text">D：发布到Github上面</span></a></li></ol></li></ol>
     </div>
     
     <div class="back-top iconfont-archer">&#xe639;</div>
@@ -505,9 +517,9 @@
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
     
-        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
-    
         <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
+    
+        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
     
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
@@ -542,9 +554,9 @@ jsonContent:
         <div class="sidebar-panel-categories">
     <div class="sidebar-categories-name">
     
-        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
-    
         <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
     
     </div>
     <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
