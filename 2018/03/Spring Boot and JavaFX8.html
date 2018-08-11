@@ -9,7 +9,7 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
-    <title>[译文]Spring Boot and JavaFX · XShandow&#39;s Studio</title>
+    <title>[译]Spring Boot and JavaFX · XShandow&#39;s Studio</title>
     <style type="text/css">
     @font-face {
         font-family: 'Oswald-Regular';
@@ -34,7 +34,7 @@
         position: relative;
         z-index: 3;
         width: 100%;
-        height: 50vh;
+        /* height: 50vh; */
         overflow: hidden;
         box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.7);
     }
@@ -63,8 +63,11 @@
 
 </style>
 
-    <link rel="preload" href= /css/style.css?v=20180228 as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180228 media="(max-width: 980px)"/>
+    <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        
     <link rel="icon" href= /assets/favicon.ico>
     <script>
   // load webfont-loader async, and add callback function
@@ -244,6 +247,7 @@
     </script>
     <script src="//cdn.staticfile.org/jquery/3.2.1/jquery.min.js" defer></script>
     <script src="/scripts/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script>
     <!-- 百度统计  -->
     
     <!-- 谷歌统计  -->
@@ -265,14 +269,25 @@
                 <a href="/" >XShandow&#39;s Studio</a>
             </div>
             <div class="post-title">
-                <a href="#" class="post-name">[译文]Spring Boot and JavaFX</a>
+                <a href="#" class="post-name">[译]Spring Boot and JavaFX</a>
             </div>
     </div>
     
     <a class="home-link" href=/>XShandow's Studio</a>
 </header>
     <div class="wrapper">
-        <div class="site-intro">
+        <div class="site-intro" style=
+
+
+
+
+
+
+
+
+height:40vh;
+
+>
     
     <!-- 主页  -->
     
@@ -286,7 +301,7 @@
         <h1 class="intro-title">
             <!-- 主页  -->
             
-            [译文]Spring Boot and JavaFX
+            [译]Spring Boot and JavaFX
             <!-- 404 -->
             
         </h1>
@@ -304,7 +319,7 @@
             
                 <div class= post-intro-tags >
     
-        <a class="post-tag" href="javascript:void(0);" data-tags = JavaFX>JavaFX</a>
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JavaFX">JavaFX</a>
     
 </div>
             
@@ -339,8 +354,11 @@
         <div class="container container-unloaded">
             <main class="main post-page">
     <article class="article-entry">
-        <h1 id="【译】Spring-Boot-and-JavaFx8"><a href="#【译】Spring-Boot-and-JavaFx8" class="headerlink" title="【译】Spring Boot and JavaFx8"></a>【译】Spring Boot and JavaFx8</h1><p><a href="https://www.felixroske.de/page/programmierung/index.html" title="Spring Boot and JavaFx8" target="_blank" rel="noopener">原文连接</a></p>
-<p>JavaFX是一个Java的新式库，以一种使用FXML的声明方式去编写漂亮的前端。因为理想的情况下，你代码中视图和逻辑应该有严格的分隔。但是在简单的FXML中写GUI是丑陋的、容易出错的。我们希望使用工具，能让我们立即看到我们的界面是什么样子，并且允许我们通过拖拽、移动和对齐元素来简单地构建图形用户界面。Scene Builder就是这样的工具（注：Intellij2017已经集成）。另一方面，我们希望代码使用Spring给我们提供的伟大的花哨的组件。在过去，使用两者一起工作并不容易。需要去写大量的公式化代码。<a href="https://github.com/roskenet/springboot-javafx-support" target="_blank" rel="noopener">springboot-javafx-support库</a>将两者结合在一起用Java编写现代化的前端应用。这篇教程不包括介绍JavaFX或者scene builder的特性。你可以在其他地方找到大量关于JavaFX的优秀书籍。接下来的例子集中在如何使用springboot-javafx-support。接下来是具体实现步骤：</p>
+        <p><strong>原文连接:</strong></p>
+<ul>
+<li><a href="https://www.felixroske.de/page/programmierung/index.html" title="Spring Boot and JavaFx8" target="_blank" rel="noopener">Spring Boot and JavaFx8</a></li>
+</ul>
+<h1 id="【译】Spring-Boot-and-JavaFx8"><a href="#【译】Spring-Boot-and-JavaFx8" class="headerlink" title="【译】Spring Boot and JavaFx8"></a>【译】Spring Boot and JavaFx8</h1><p>JavaFX是一个Java的新式库，以一种使用FXML的声明方式去编写漂亮的前端。因为理想的情况下，你代码中视图和逻辑应该有严格的分隔。但是在简单的FXML中写GUI是丑陋的、容易出错的。我们希望使用工具，能让我们立即看到我们的界面是什么样子，并且允许我们通过拖拽、移动和对齐元素来简单地构建图形用户界面。Scene Builder就是这样的工具（注：Intellij2017已经集成）。另一方面，我们希望代码使用Spring给我们提供的伟大的花哨的组件。在过去，使用两者一起工作并不容易。需要去写大量的公式化代码。<a href="https://github.com/roskenet/springboot-javafx-support" target="_blank" rel="noopener">springboot-javafx-support库</a>将两者结合在一起用Java编写现代化的前端应用。这篇教程不包括介绍JavaFX或者scene builder的特性。你可以在其他地方找到大量关于JavaFX的优秀书籍。接下来的例子集中在如何使用springboot-javafx-support。接下来是具体实现步骤：</p>
 <h2 id="PartⅠ：Hello-World"><a href="#PartⅠ：Hello-World" class="headerlink" title="PartⅠ：Hello World"></a>PartⅠ：Hello World</h2><p>让我们以简单的HelloWorld应用开始。方便起见，你可以在<a href="https://github.com/roskenet/spring-javafx-examples" target="_blank" rel="noopener">这</a>找到教程中完整的代码。</p>
 <h3 id="项目准备"><a href="#项目准备" class="headerlink" title="项目准备"></a>项目准备</h3><p>首先，创建一个标准的maven工程，并且在pom.xml添加必要的依赖。如下：(注：原文中使用springboot-1.5.2)</p>
 <pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
@@ -716,7 +734,18 @@ public class ViewController {
     </div>
     <!-- toc -->
     
-    <div class="toc-wrapper">
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
         <div class="toc-catalog">
             <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
         </div>
@@ -846,141 +875,7 @@ public class ViewController {
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <div class="total-archive"> Total : 19 </div>
+    <div class="total-archive"> Total : 11 </div>
     
     <div class="post-archive">
     
@@ -992,77 +887,37 @@ public class ViewController {
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/12</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-14 CertificateFactory.html" >[译文]JCA参考指南(二)：核心类和接口——CertificateFactory类</a>
+            <span class="archive-post-date">03/19</span><a class="archive-post-title" href= "/2018/03/JCE Provider如何实现.html" >[译]如何在JCA中实现Provider</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/12</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-13 Algorithm Parameters.html" >[译文]JCA参考指南(二)：核心类和接口——算法参数类</a>
+            <span class="archive-post-date">03/15</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter6 Appendix.html" >[译]JCA参考指南(六)：附录</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/12</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-12 Key Management.html" >[译文]JCA参考指南(二)：核心类和接口——密钥管理</a>
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" >[译]JCA参考指南(五)：代码示例</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/12</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-11 KeyAgreement.html" >[译文]JCA参考指南(二)：核心类和接口——KeyAgreement类</a>
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" >[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/09</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-10 Generators and Factories.html" >[译文]JCA参考指南(二)：核心类和接口——生成器和工厂类</a>
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter3 JCA in SSL TLS.html" >[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/09</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-9 Key.html" >[译文]JCA参考指南(二)：核心类和接口——Key接口、KeyPair类、密钥规范接口和类</a>
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2 Core Class and Interfaces.html" >[译]JCA参考指南(二)：核心类和接口</a>
         </li>
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/09</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-8 Mac.html" >[译文]JCA参考指南(二)：核心类和接口——Mac类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/09</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-7 Cipher-based.html" >[译文]JCA参考指南(二)：核心类和接口——其他基于Cipher的类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/09</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-6 Cipher.html" >[译文]JCA参考指南(二)：核心类和接口——Cipher类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/08</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-5 Signature.html" >[译文]JCA参考指南(二)：核心类和接口——Signature类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/08</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-4 MessageDigest .html" >[译文]JCA参考指南(二)：核心类和接口——MessageDigest类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/08</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-3 SecureRandom.html" >[译文]JCA参考指南(二)：核心类和接口——SecureRandom类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/08</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-2 Security.html" >[译文]JCA参考指南(二)：核心类和接口——Security类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2-1 Provider.html" >[译文]JCA参考指南(二)：核心类和接口——Providr类</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter1.html" >[译文]JCA参考指南(一)：介绍</a>
+            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter1 Introduction.html" >[译]JCA参考指南(一)：介绍</a>
         </li>
     
     
@@ -1072,12 +927,7 @@ public class ViewController {
     
     
         <li class="archive-post-item">
-            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring Boot and JavaFX8.html" >[译文]Spring Boot and JavaFX</a>
-        </li>
-    
-    
-        <li class="archive-post-item">
-            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Logitech  K800.html" >Logitech K800 键盘开箱以及使用感受</a>
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring Boot and JavaFX8.html" >[译]Spring Boot and JavaFX</a>
         </li>
     
     
@@ -1085,14 +935,19 @@ public class ViewController {
             <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Hexo Problem.html" >Hexo安装踩坑记录</a>
         </li>
     
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Logitech  K800.html" >Logitech K800 键盘开箱以及使用感受</a>
+        </li>
+    
     </div>
   </div>
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
     
-        <span class="sidebar-tag-name" data-tags="JCE"><span class="iconfont-archer">&#xe606;</span>JCE</span>
-    
         <span class="sidebar-tag-name" data-tags="踩坑"><span class="iconfont-archer">&#xe606;</span>踩坑</span>
+    
+        <span class="sidebar-tag-name" data-tags="JCE"><span class="iconfont-archer">&#xe606;</span>JCE</span>
     
         <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
     
@@ -1131,9 +986,9 @@ jsonContent:
         <div class="sidebar-panel-categories">
     <div class="sidebar-categories-name">
     
-        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
-    
         <span class="sidebar-category-name" data-categories="记录"><span class="iconfont-archer">&#xe60a;</span>记录</span>
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
     
         <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
     

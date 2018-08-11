@@ -9,7 +9,7 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
-    <title>XShandow&#39;s Studio</title>
+    <title>[译]JCA参考指南(四)：如何使应用程序“免于”加密限制 · XShandow&#39;s Studio</title>
     <style type="text/css">
     @font-face {
         font-family: 'Oswald-Regular';
@@ -65,6 +65,8 @@
 
     <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
     <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         
     <link rel="icon" href= /assets/favicon.ico>
     <script>
@@ -253,12 +255,23 @@
 </head>
 
     
+        <body class="post-body">
+    
     
 <header class="header">
 
     <div class="read-progress"></div>
     <div class="header-sidebar-menu">&#xe775;</div>
     <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</a>
+            </div>
+    </div>
     
     <a class="home-link" href=/>XShandow's Studio</a>
 </header>
@@ -272,64 +285,187 @@
 
 
 
+height:40vh;
+
 >
     
     <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
             
-    <div class="site-intro-img" style="background-image: url(/)"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
     <div class="site-intro-placeholder"></div>
     <div class="site-intro-meta">
         <!-- 标题  -->
         <h1 class="intro-title">
             <!-- 主页  -->
             
+            [译]JCA参考指南(四)：如何使应用程序“免于”加密限制
+            <!-- 404 -->
+            
         </h1>
         <!-- 副标题 -->
         <p class="intro-subtitle">
             <!-- 主页副标题  -->
             
+            
+            <!-- 404 -->
+            
         </p>
         <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JCE">JCE</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/14</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
         
     </div>
 </div>
         <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
 
         <div class="container container-unloaded">
-            <main class="main index-page">
+            <main class="main post-page">
+    <article class="article-entry">
+        <p><strong>References:</strong></p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java Cryptography Architecture (JCA) Reference Guide</a></li>
+<li><a href="http://blog.csdn.net/u012741741/article/details/79209984" target="_blank" rel="noopener">中文翻译参考</a></li>
+</ul>
+<h1 id="如何使应用程序“免于”加密限制"><a href="#如何使应用程序“免于”加密限制" class="headerlink" title="如何使应用程序“免于”加密限制"></a>如何使应用程序“免于”加密限制</h1><p><strong>注1</strong>：大多数应用程序开发人员应该忽略此部分。它只适用于那些可能向政府授权加密限制的少数国家输出应用程序的人，如果希望这样的应用程序比授权的密码限制更少。</p>
+<p><strong>注2</strong>：在本节中，术语“应用程序”意味着包含应用程序和小程序。</p>
+<p>JCA架构能够执行对于在不同的司法管辖权程序/应用程序上下文(位置)中加密算法的加密强度和最大可用的限制。任何此类限制都在“管辖策略文件”中指定。</p>
+<p>由于受到少数国家政府的进口管制限制，Java SE Development Kit 6附带的管辖权政策文件规定可以使用“强”但受限的密加密。这些文件的“不受限强度”版本对于那些生活在符合条件的国家(这是大多数国家)中的加密强度没有限制。但只有“强”版本才可以进入政府限制的国家。JCA框架将强制执行已安装辖区策略文件中指定的限制。</p>
+<p>一些或所有这些国家的政府有可能允许某些应用程序免于某些或全部密码限制。例如，他们可能将某些类型的申请视为“特殊”，从而免除。或者，他们可以免除任何利用“免除机制”的申请，例如密钥恢复。被视为豁免的应用程序可以获得比这些国家允许的非豁免应用程序更强大的加密技术。</p>
+<p>为了使应用程序在运行时被识别为“免除”，它必须满足以下条件：</p>
+<ul>
+<li>它必须在JAR文件中绑定一个权限策略文件。 权限策略文件指定应用程序具有哪些与密码相关的权限，以及在什么条件下(如果有的话)。</li>
+<li>包含应用程序和许可策略文件的JAR文件必须使用在应用程序被接受为豁免后发布的代码签名证书进行签名。</li>
+</ul>
+<p>以下是为使应用程序免于某些或所有加密限制所需的示例步骤。这是一个基本概要，其中包含有关JCA为了将应用程序识别和处理为豁免所需的信息。您需要知道您希望您的应用程序能够运行的特定国家或国家的豁免要求，但其政府需要加密限制。您还需要了解具有处理免除应用程序的JCA框架供应商的要求。请咨询这样的供应商获取更多信息。(注意：SunJCE提供程序不提供ExemptionMechanismSpi类的实现。)</p>
+<ul>
+<li>第1步：编写和编译您的应用程序代码</li>
+<li>步骤2：创建授予适当的加密权限的权限策略文件</li>
+<li>步骤3：准备测试 <ul>
+<li>步骤3a：从政府的强制性限制申请政府批准。</li>
+<li>步骤3b：获取代码签名证书</li>
+<li>步骤3c：将应用程序和权限策略文件捆绑到JAR文件中</li>
+<li>步骤3d：签署JAR文件</li>
+<li>步骤3e：在受限制的国家/地区为用户设置环境</li>
+<li>步骤3f :(仅适用于使用豁免机制的应用程序)安装提供者实施许可策略文件中的条目指定的免除机制</li>
+</ul>
+</li>
+<li>第4步：测试您的应用程序</li>
+<li>第5步：申请美国政府出口许可</li>
+<li>第6步：部署您的应用程序</li>
+<li><h2 id="使用豁免机制的应用程序的特殊代码要求"><a href="#使用豁免机制的应用程序的特殊代码要求" class="headerlink" title="使用豁免机制的应用程序的特殊代码要求"></a>使用豁免机制的应用程序的特殊代码要求</h2></li>
+</ul>
+<p>当应用程序具有与其关联的权限策略文件(在同一个JAR文件中)，并且该权限策略文件指定了一个豁免机制时，则当调用Cipher getInstance方法来实例化一个Cipher时，JCA代码会搜索已安装的实行指定的豁免机制的Provider。如果找到这样的Provider，JCA实例化一个Provider的实现相关联的ExemptionMechanism API对象，然后将ExemptionMechanism对象与getInstance返回的Cipher关联起来。</p>
+<p>实例化Cipher之后，在初始化之前(通过调用Cipher init方法)，代码必须调用以下Cipher方法：</p>
+<pre><code>public ExemptionMechanism getExemptionMechanism()
+</code></pre><p>该方法返回与Cipher关联的ExemptionMechanism对象。您必须通过在返回的ExemptionMechanism上调用以下方法来初始化豁免机制实现：</p>
+<pre><code>public final void init(Key key)
+</code></pre><p>您提供的参数应该与随后提供给Cipher init方法的相同类型的参数相同。</p>
+<p>一旦你初始化了ExemptionMechanism，你可以照常进行初始化和使用Cipher。</p>
+<h2 id="权限策略文件"><a href="#权限策略文件" class="headerlink" title="权限策略文件"></a>权限策略文件</h2><p>为了使应用程序在运行时被识别为免除某些或所有加密限制，它必须在JAR文件中绑定一个权限策略文件。权限策略文件指定应用程序具有什么与密码相关的权限，以及在什么条件下(如果有的话)。</p>
+<p><strong>注意</strong>：与应用程序捆绑在一起的权限策略文件必须命名为cryptoPerms。</p>
+<p>伴随免除申请的权限策略文件中的权限条目的格式与用JDK下载的权限策略文件的格式相同，即：</p>
+<pre><code>permission &lt;crypto permission class name&gt;[ &lt;alg_name&gt;
+    [[, &lt;exemption mechanism name&gt;][, &lt;maxKeySize&gt;
+    [, &lt;AlgorithmParameterSpec class name&gt;,
+    &lt;parameters for constructing an AlgorithmParameterSpec object&gt;
+    ]]]];
+</code></pre><p>有关管辖权政策文件格式的更多信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppB" target="_blank" rel="noopener">附录B</a>.</p>
+<h3 id="免除应用程序的权限策略文件"><a href="#免除应用程序的权限策略文件" class="headerlink" title="免除应用程序的权限策略文件"></a>免除应用程序的权限策略文件</h3><p>有些应用程序可能被允许完全不受限制。因此，这种应用程序所附带的权限策略文件通常只需要包含以下内容：</p>
+<pre><code>grant {
+    // There are no restrictions to any algorithms.
+    permission javax.crypto.CryptoAllPermission;
+};
+</code></pre><p>如果一个应用程序只使用一个算法(或几个特定的算法)，那么许可策略文件可以简单地提及该算法(或多个算法)，而不是授予CryptoAllPermission。例如，如果应用程序只使用Blowfish算法，则权限策略文件不必为所有算法授予CryptoAllPermission。如果使用Blowfish算法，它可以指定没有密码限制。为此，权限策略文件如下所示：</p>
+<pre><code>grant {
+    permission javax.crypto.CryptoPermission &quot;Blowfish&quot;;
+};
+</code></pre><h3 id="由于豁免机制免除应用程序的权限策略文件"><a href="#由于豁免机制免除应用程序的权限策略文件" class="headerlink" title="由于豁免机制免除应用程序的权限策略文件"></a>由于豁免机制免除应用程序的权限策略文件</h3><p>如果一个应用被认为是“豁免”，如果豁免机制被强制执行，则申请附带的权限策略文件必须指定一个或多个免责机制。在运行时，如果任何这些豁免机制被强制执行，应用程序将被视为免除。每个豁免机制必须在如下所示的许可条目中指定：</p>
+<pre><code>// 如果指定的豁免机制被强制执行，则没有算法限制。
+permission javax.crypto.CryptoPermission *, &quot;&lt;ExemptionMechanismName&gt;&quot;;
+</code></pre><p>其中指定豁免机制的名称。 可能的豁免机制名称清单包括：</p>
+<ul>
+<li>KeyRecovery</li>
+<li>KeyEscrow</li>
+<li>KeyWeakening</li>
+</ul>
+<p>例如，假设您的应用程序在执行密钥恢复或密钥托管时是豁免的。那么你的权限策略文件应该包含以下内容：</p>
+<pre><code>grant {
+    // No algorithm restrictions if KeyRecovery is enforced.
+    permission javax.crypto.CryptoPermission *, &quot;KeyRecovery&quot;;
+    // No algorithm restrictions if KeyEscrow is enforced.
+    permission javax.crypto.CryptoPermission *, &quot;KeyEscrow&quot;;
+};
+</code></pre><p><strong>注</strong>：指定免除机制的权限条目不应指定最大密钥大小。允许的密钥大小实际上是从安装的豁免管辖权策略文件中确定的，如下一节所述。</p>
+<h3 id="绑定权限策略文件如何影响加密权限"><a href="#绑定权限策略文件如何影响加密权限" class="headerlink" title="绑定权限策略文件如何影响加密权限"></a>绑定权限策略文件如何影响加密权限</h3><p>在运行时，当应用程序实例化Cipher(通过调用其getInstance方法)并且该应用程序具有关联的权限策略文件时，JCA将检查权限策略文件是否包含适用于getInstance调用中指定的算法的条目。如果是这样，并且条目授予CryptoAllPermission或不指定必须执行豁免机制，则意味着对于此特定算法没有密码限制。</p>
+<p>如果权限策略文件具有适用于getInstance调用中指定的算法的条目，并且该条目指定必须执行豁免机制，则会检查豁免管辖权策略文件。如果豁免权限包括相关算法和豁免机制的条目，并且该条目被与该应用程序捆绑在一起的权限策略文件中的权限所暗示，并且如果存在从已注册的一个注册的Provider，则Cipher的最大密钥大小和算法参数值由免除权限条目确定。</p>
+<p>如果没有与应用程序绑定的权限策略文件中的相关条目暗含的免除许可条目，或者没有实施任何注册Provider提供的指定免除机制，则应用程序只允许标准默认加密权限。</p>
+
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" title= [译]JCA参考指南(五)：代码示例 >
+                    <div class="nextTitle">[译]JCA参考指南(五)：代码示例</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href= "/2018/03/JCA Guide Charpter3 JCA in SSL TLS.html" title= [译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA >
+                    <div class="prevTitle">[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
     
     
+    <!--PC版-->
+
+    <!--PC版-->
+
+
     
-        <article class="index-post">
-            <a class="abstract-title" href = "/2018/03/Hexo Problem.html" >
-                
-                    <span>Hexo安装踩坑记录</span>
-            </a>
-            <div class="abstract-content">
-                
-            </div>
-            <div class="abstract-post-meta">
-                <!-- date  -->
-                <div class="abstract-date">
-                    <span class="abstract-calander iconfont-archer">&#xe676;</span><span class="abstract-time">2018/03/02</span>
-                </div>
-                <!-- tags  -->
-                
-                <div class= abstract-tags >
-    
-        <a class="post-tag" href="javascript:void(0);" data-tags = "踩坑">踩坑</a>
-    
-</div>
-                
-            </div>
-        </article>
-    
-    <!-- paginator  -->
-    
-    <nav class="page-nav">
-        <a class="extend prev" rel="prev" href="/archives/2018/03/">&#60; PREV</a><a class="page-number" href="/archives/2018/03/">1</a><span class="page-number current">2</span>
-    </nav>
-    
+    <!-- 评论 -->
 </main>
             <!-- profile -->
             
@@ -401,6 +537,24 @@
 </footer>
     </div>
     <!-- toc -->
+    
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#如何使应用程序“免于”加密限制"><span class="toc-number">1.</span> <span class="toc-text">如何使应用程序“免于”加密限制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#使用豁免机制的应用程序的特殊代码要求"><span class="toc-number">1.1.</span> <span class="toc-text">使用豁免机制的应用程序的特殊代码要求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#权限策略文件"><span class="toc-number">1.2.</span> <span class="toc-text">权限策略文件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#免除应用程序的权限策略文件"><span class="toc-number">1.2.1.</span> <span class="toc-text">免除应用程序的权限策略文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#由于豁免机制免除应用程序的权限策略文件"><span class="toc-number">1.2.2.</span> <span class="toc-text">由于豁免机制免除应用程序的权限策略文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#绑定权限策略文件如何影响加密权限"><span class="toc-number">1.2.3.</span> <span class="toc-text">绑定权限策略文件如何影响加密权限</span></a></li></ol></li></ol></li></ol>
+    </div>
     
     <div class="back-top iconfont-archer">&#xe639;</div>
     <div class="sidebar sidebar-hide">
@@ -662,6 +816,8 @@ jsonContent:
     
     </div>
     <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
     
     </body>
 </html>

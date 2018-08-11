@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html>
+    <!-- title -->
+
+
+
+
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+    <title>[译]如何在JCA中实现Provider · XShandow&#39;s Studio</title>
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+        box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s 1;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+</style>
+
+    <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        
+    <link rel="icon" href= /assets/favicon.ico>
+    <script>
+  // load webfont-loader async, and add callback function
+  function async(u, c) {
+    var d = document, t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0];
+    o.src = u;
+    if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+    s.parentNode.insertBefore(o, s);
+  }
+  
+  // get user agent
+  var browser = {
+    versions: function () {
+      var u = window.navigator.userAgent;
+      return {
+        userAgent: u,
+        trident: u.indexOf('Trident') > -1, //IE内核
+        presto: u.indexOf('Presto') > -1, //opera内核
+        webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+        gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+        mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+        ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+        android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+        iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+        iPad: u.indexOf('iPad') > -1, //是否为iPad
+        webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+        weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+        uc: u.indexOf('UCBrowser') > -1 //是否为android下的UC浏览器
+      };
+    }()
+  }
+  console.log("userAgent:" + browser.versions.userAgent);
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded');
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document.getElementsByClassName('intro-title')[0].classList.add('intro-fade-in');
+      document.getElementsByClassName('intro-subtitle')[0].classList.add('intro-fade-in');
+      var postIntroTags = document.getElementsByClassName('post-intro-tags')[0],
+        postIntroMeat = document.getElementsByClassName('post-intro-meta')[0];
+      if (postIntroTags) {
+        postIntroTags.classList.add('post-fade-in');
+      }
+      if (postIntroMeat) {
+        postIntroMeat.classList.add('post-fade-in');
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb(){
+    if (browser.versions.uc) {
+      console.log("UCBrowser");
+      fontLoaded();
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular']
+        },
+        loading: function () {  //所有字体开始加载
+          // console.log('loading');
+        },
+        active: function () {  //所有字体已渲染
+          fontLoaded();
+        },
+        inactive: function () { //字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout');
+          fontLoaded();
+        },
+        timeout: 5000 // Set the timeout to two seconds
+      });
+    }
+  }
+
+  async("https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js", asyncCb)
+</script>
+    <script>
+        (function (w) {
+            "use strict";
+            // rel=preload support test
+            if (!w.loadCSS) {
+                w.loadCSS = function () { };
+            }
+            // define on the loadCSS obj
+            var rp = loadCSS.relpreload = {};
+            // rel=preload feature support test
+            // runs once and returns a function for compat purposes
+            rp.support = (function () {
+                var ret;
+                try {
+                    ret = w.document.createElement("link").relList.supports("preload");
+                } catch (e) {
+                    ret = false;
+                }
+                return function () {
+                    return ret;
+                };
+            })();
+
+            // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+            // then change that media back to its intended value on load
+            rp.bindMediaToggle = function (link) {
+                // remember existing media attr for ultimate state, or default to 'all'
+                var finalMedia = link.media || "all";
+
+                function enableStylesheet() {
+                    link.media = finalMedia;
+                }
+
+                // bind load handlers to enable media
+                if (link.addEventListener) {
+                    link.addEventListener("load", enableStylesheet);
+                } else if (link.attachEvent) {
+                    link.attachEvent("onload", enableStylesheet);
+                }
+
+                // Set rel and non-applicable media type to start an async request
+                // note: timeout allows this to happen async to let rendering continue in IE
+                setTimeout(function () {
+                    link.rel = "stylesheet";
+                    link.media = "only x";
+                });
+                // also enable media after 3 seconds,
+                // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+                setTimeout(enableStylesheet, 3000);
+            };
+
+            // loop through link elements in DOM
+            rp.poly = function () {
+                // double check this to prevent external calls from running
+                if (rp.support()) {
+                    return;
+                }
+                var links = w.document.getElementsByTagName("link");
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    // qualify links to those with rel=preload and as=style attrs
+                    if (link.rel === "preload" && link.getAttribute("as") === "style" && !link.getAttribute("data-loadcss")) {
+                        // prevent rerunning on link
+                        link.setAttribute("data-loadcss", true);
+                        // bind listeners to toggle media back
+                        rp.bindMediaToggle(link);
+                    }
+                }
+            };
+
+            // if unsupported, run the polyfill
+            if (!rp.support()) {
+                // run once at least
+                rp.poly();
+
+                // rerun poly on an interval until onload
+                var run = w.setInterval(rp.poly, 500);
+                if (w.addEventListener) {
+                    w.addEventListener("load", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                } else if (w.attachEvent) {
+                    w.attachEvent("onload", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                }
+            }
+            // commonjs
+            if (typeof exports !== "undefined") {
+                exports.loadCSS = loadCSS;
+            }
+            else {
+                w.loadCSS = loadCSS;
+            }
+        }(typeof global !== "undefined" ? global : this));
+    </script>
+    <script src="//cdn.staticfile.org/jquery/3.2.1/jquery.min.js" defer></script>
+    <script src="/scripts/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script>
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+</head>
+
+    
+        <body class="post-body">
+    
+    
+<header class="header">
+
+    <div class="read-progress"></div>
+    <div class="header-sidebar-menu">&#xe775;</div>
+    <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译]如何在JCA中实现Provider</a>
+            </div>
+    </div>
+    
+    <a class="home-link" href=/>XShandow's Studio</a>
+</header>
+    <div class="wrapper">
+        <div class="site-intro" style=
+
+
+
+
+
+
+
+
+height:40vh;
+
+>
+    
+    <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
+            
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+            [译]如何在JCA中实现Provider
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+            
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JCE">JCE</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/19</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
+        
+    </div>
+</div>
+        <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+
+        <div class="container container-unloaded">
+            <main class="main post-page">
+    <article class="article-entry">
+        <h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>Java平台定义了一系列涵盖主要安全领域的API，包括密码学，公共密钥基础设施，身份验证，安全通信和访问控制。这些API允许开发人员将安全性轻松集成到其应用程序代码中。他们的设计围绕以下原则：</p>
+<ol>
+<li><p><strong>实现独立性</strong></p>
+<p> 应用程序不需要自己实现安全性。相反，他们可以从Java平台请求安全服务。安全服务在Provider中实现(见下文)，通过标准接口集成到Java平台。应用程序可能依靠多个独立的Provider来实现安全功能。</p>
+</li>
+<li><p><strong>实现互操作性</strong></p>
+<p> Provider可跨应用程序进行互操作。具体而言，应用程序不绑定到特定的Provider，并且Provider不绑定到特定的应用程序。</p>
+</li>
+<li><p><strong>算法可扩展性</strong></p>
+<p> Java平台包括许多内置的Provider，这些Provider实现了当今广泛使用的一组基本安全服务。但是，一些应用程序可能依赖尚未实施的新兴标准或专有服务。Java平台支持安装实现这些服务的定制Provider。</p>
+</li>
+</ol>
+<p>一个加密服务提供程序CSP(Provider)是指提供具体实现的JDK安全API的密码子集的包(或一组包)。</p>
+<p>java.security.Provider类封装Java平台里安全Provider的概念。它指定Provider的名称并列出它实现的安全服务。多个Provider可以同时配置，并按优先顺序列出。当请求安全服务时，将选择实现该服务的最高优先级Provider。</p>
+<p>下图说明了请求SHA-256消息摘要实现的Provider选择。这两张图都显示了三个实现消息摘要算法的Provider。Provider按照优先顺序从左至右排列(1-3)。在左侧的图中，应用程序请求SHA-256算法实现而不指定Provider名称。Provider按优先顺序搜索，并返回第一个提供该特定算法的ProviderB的实现。在右图中，应用程序向特定ProviderC请求SHA-256算法实现。这次，即使具有更高优先顺序的ProviderB也提供SHA-256实现，该ProviderC的实现也会返回。</p>
+<p><img src="https://docs.oracle.com/javase/8/docs/technotes/guides/security/overview/images/jssec_dt_011.png" alt="">        <img src="https://docs.oracle.com/javase/8/docs/technotes/guides/security/overview/images/jssec_dt_012.png" alt="">    </p>
+<p> 图1a 搜索Provider   |  图1b 请求特定的Provider </p>
+<p>每个安装都安装了一个或多个Provider包。客户可以使用不同的Provider配置他们的运行环境，并为它们中的每一个指定首选顺序。首选顺序是当没有请求特定Provider时，搜索请求的算法的Provider顺序。</p>
+<p>Oracle版本的Java运行时环境(JRE)标准配置了一个名为“SUN”的默认提供程序。其他Java运行时环境可能不一定提供“SUN”提供程序。</p>
+<h2 id="谁应该读这篇文档"><a href="#谁应该读这篇文档" class="headerlink" title="谁应该读这篇文档"></a>谁应该读这篇文档</h2><p>只需要使用Java安全API访问已有密码算法和其它服务的程序员就没有需要阅读本文件。</p>
+<p>本文档面向希望创建自己的提供加密服务实现的Provider包的有经验的程序员。它记录了为了将Provider集成到Java中需要执行的操作，以便在Java安全API客户端请求它们时可以找到您的算法和其他服务。</p>
+<h2 id="相关文档"><a href="#相关文档" class="headerlink" title="相关文档"></a>相关文档</h2><p>本文档假定您已阅读<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java加密体系结构参考指南</a>。</p>
+<p>它记录了安全API中包含各种类和接口的包。</p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/package-summary.html" target="_blank" rel="noopener">java.security</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/package-summary.html" target="_blank" rel="noopener">java.security.spec</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/package-summary.html" target="_blank" rel="noopener">java.security.interfaces</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/package-summary.html" target="_blank" rel="noopener">javax.crypto</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/package-summary.html" target="_blank" rel="noopener">javax.crypto.spec</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/package-summary.html" target="_blank" rel="noopener">javax.crypto.interfaces</a></li>
+</ul>
+<h3 id="术语注释"><a href="#术语注释" class="headerlink" title="术语注释"></a>术语注释</h3><ul>
+<li>JDK1.4之前，JCE是一款非捆绑产品，所以JCA和JCE通常被认为是独立的不同的组件。由于现在JCE捆绑在JDK中，这个区别变越来越不明显。由于JCE和JCA使用相同的架构，JCE更适合被认为是JCA的一部分。</li>
+<li>JDK中的JCA包括两个软件组成部分：<ul>
+<li>为Provider提供实现的定义和支持加密服务的框架。这个框架包括像<em>java.security</em>、<em>java.crypto.spec</em>和<em>java.crypto.interfaces</em>包。</li>
+<li>Sun,SunRsaSign,SunJCE等实际Provider包含实际的加密实现。</li>
+</ul>
+</li>
+</ul>
+<p>在整个文件中，术语JCA本身是指JCA框架。无论何时提及特定的JCA Provider,都将明确指定Provider的名称。</p>
+<h1 id="引擎类和相应的SPI类"><a href="#引擎类和相应的SPI类" class="headerlink" title="引擎类和相应的SPI类"></a>引擎类和相应的SPI类</h1><p>一个引擎类以抽象的方式定义密码服务(没有具体的实现)。</p>
+<p>密码服务总是与特定算法或类型相关联。它提供加密操作(如数字签名或消息摘要，密码或密钥协议协议); 生成或提供密码操作所需的密码材料(密钥或参数); 或以安全的方式生成封装加密密钥(可用于加密操作)的数据对象(密钥库或证书)。</p>
+<p>例如，这里有四个引擎类：</p>
+<ul>
+<li>Signature类提供对数字签名算法功能的访问。</li>
+<li>DSA KeyFactory类分别为用于DSA Signature对象的initSign或initVerify方法提供DSA私钥或公钥(来自其编码或透明规范)。</li>
+<li>Cipher类提供对加密算法(如AES)的功能的访问。</li>
+<li>KeyAgreement类提供访问密钥协商协议的功能(如的Diffie-Hellman)</li>
+</ul>
+<p>Java密码体系结构包含与密码相关的Security包，包括引擎类。API的用户请求并利用引擎类的实例来执行相应的操作。JDK定义了以下引擎类：</p>
+<ul>
+<li>MessageDigest：用于计算指定数据的消息摘要(散列)。</li>
+<li>Signature：用于签署数据并验证数字签名。</li>
+<li>KeyPairGenerator：用于生成一对适用于指定算法的公钥和私钥。</li>
+<li>KeyFactory：用于将Key类型的不透明密钥转换成密钥规范(下层密钥材料的透明表示)，反之亦然。</li>
+<li>KeyStore：用于创建和管理密钥库。密钥库是密钥的数据库。密钥库中的私钥具有与它们相关联的证书链，这认证相应的公钥。密钥库还包含来自可信实体的证书。</li>
+<li>CertificateFactory：用于创建公钥证书和证书撤销列表(CRL)。</li>
+<li>AlgorithmParameters：用于管理特定算法的参数，包括参数编码和解码。</li>
+<li>AlgorithmParameterGenerator：用于生成适用于指定算法的一组参数。</li>
+<li>SecureRandom：用于生成随机或伪随机数字。</li>
+<li>Cipher：用于加密或解密某些指定的数据。</li>
+<li>KeyAgreement：用于在两方或多方之间执行密钥协商(密钥交换)协议。</li>
+<li>KeyGenerator：用于生成适合指定算法的秘密(对称)密钥。</li>
+<li>Mac：用于计算某些指定数据的消息认证码。</li>
+<li>SecretKeyFactory：用于将不透明的密钥类型SecretKey转换为密钥规范(底层密钥材料的透明表示)，反之亦然。</li>
+<li>ExemptionMechanism：用于提供豁免机制的功能，例如密钥恢复，密钥减弱，密钥托管或任何其他(定制)豁免机制。使用豁免机制的应用程序或小应用程序可能被授予更强大的加密功能。但是，请注意，大多数国家不再需要加密限制，因此免责机制可能只适用于那些政府要求限制的少数几个国家。</li>
+</ul>
+<p>注意：生成器创建具有全新内容的对象，而工厂从现有材料创建对象(例如，编码)。</p>
+<p>引擎类提供特定类型加密服务(独立于特定的密码算法)功能的接口。它定义了允许应用程序访问提供的特定类型的加密服务的应用程序编程接口(API)方法。实际的实现(来自一个或多个Provider)是那些用于特定算法的实现。例如，Signature引擎类提供对数字签名算法功能的访问。在SignatureSpi子类中提供的实际实现(请参见下一段)将用于特定种类的签名算法，如SHA256withDSA或SHA512withRSA。</p>
+<p>由引擎类提供的应用程序接口是根据服务提供者接口(SPI)实现的。也就是说，对于每个引擎类，都有一个对应的抽象SPI类，它定义了加密服务提供者必须实现的服Provider接口方法。</p>
+<p><img src="https://docs.oracle.com/javase/8/docs/technotes/guides/security/images/jca/ArchDesignPrincipals.gif" alt=""></p>
+<p><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/img_text/ArchDesignPrincipals.html" target="_blank" rel="noopener">服务提供商接口(SPI)体系结构说明</a></p>
+<p>引擎类的实例“API对象”封装了(作为private字段)相应SPI类的实例，即“SPI对象”。API对象的所有API方法都声明为“final”，并且它们的实现调用封装SPI对象的相应SPI方法。引擎类(及其相应的SPI类)的实例是通过调用getInstance引擎类的工厂方法创建的。</p>
+<p>每个SPI类的名称与相应引擎类的名称相同，后跟“Spi”。例如，与Signature引擎类相对应的SPI类是SignatureSpi类。</p>
+<p>每个SPI类都是抽象的。为了提供特定类型的服务和特定算法的实现，Provider必须继承相应的SPI类并提供所有抽象方法的实现。</p>
+<p>另一个引擎类的例子是MessageDigest类，它提供对消息摘要算法的功能。其在MessageDigestSpi子类中的实现可能是各种消息摘要算法(如SHA256或SHA384)的实现。</p>
+<p>作为最后一个例子，KeyFactory引擎类支持从不透明密钥到透明密钥规范的转换，反之亦然。有关详细信息，请参阅关键工厂所需的关键规范接口和类。在KeyFactorySpi子类中提供的实际实现将是特定类型的密钥的实际实现，例如DSA公钥和私钥。</p>
+<h1 id="实现和整合Provider的步骤"><a href="#实现和整合Provider的步骤" class="headerlink" title="实现和整合Provider的步骤"></a>实现和整合Provider的步骤</h1><h2 id="第1步：编写您的服务实现代码"><a href="#第1步：编写您的服务实现代码" class="headerlink" title="第1步：编写您的服务实现代码"></a>第1步：编写您的服务实现代码</h2><p>您需要做的第一件事是编写代码，提供您想要支持的加密服务的算法特定实现。</p>
+<p>请注意，您的Provider可能提供JDK的一个或多个安全组件中已有的加密服务的实现。</p>
+<p>对于未在JCA中定义的加密服务(例如，签名和消息摘要)，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java加密体系结构参考指南</a>。</p>
+<p>对于您希望实现的每个加密服务，创建相应SPI类的子类。JCA定义了以下引擎类：</p>
+<ul>
+<li>SignatureSpi</li>
+<li>MessageDigestSpi</li>
+<li>KeyPairGeneratorSpi</li>
+<li>SecureRandomSpi</li>
+<li>AlgorithmParameterGeneratorSpi</li>
+<li>AlgorithmParametersSpi</li>
+<li>KeyFactorySpi</li>
+<li>CertificateFactorySpi</li>
+<li>KeyStoreSpi</li>
+<li>CipherSpi</li>
+<li>KeyAgreementSpi</li>
+<li>KeyGeneratorSpi</li>
+<li>MacSpi</li>
+<li>SecretKeyFactorySpi</li>
+<li>ExemptionMechanismSpi</li>
+</ul>
+<p>(有关JCA和其他加密类的信息，请参阅本文档中的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Engine" target="_blank" rel="noopener">引擎类和相应的SPI类</a>)</p>
+<p>在你的子类中，你需要：</p>
+<ol>
+<li>为抽象方法提供实现，其方法名称通常以engine。有关更多信息，请参阅更多<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#FurtherImplDetails" target="_blank" rel="noopener">实现细节和要求</a>。</li>
+<li>确保有一个没有任何争议的公共构造函数。原因如下：当你的一个服务被请求时，Java Security按照你的“master class”中的一个属性的指定查找实现该服务的子类(参见<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step3" target="_blank" rel="noopener">步骤3</a>)。Java Security然后创建与您的子类关联的Class对象，并通过调用该对象newInstance方法来 创建子类的实例Class。newInstance要求你的子类有一个没有任何参数的公共构造函数。</li>
+<li>如果您的子类没有任何构造函数，则会自动生成一个没有参数的默认构造函数。但是如果你的子类定义了任何构造函数，你必须明确地定义一个没有参数的公共构造函数。</li>
+</ol>
+<h3 id="步骤1-1：其他JCA提供程序对加密实现的要求和建议"><a href="#步骤1-1：其他JCA提供程序对加密实现的要求和建议" class="headerlink" title="步骤1.1：其他JCA提供程序对加密实现的要求和建议"></a>步骤1.1：其他JCA提供程序对加密实现的要求和建议</h3><p>在实例化一个Cipher, KeyAgreement, KeyGenerator, MAC或 一个SecretKey工厂的Provider实现(类)时 ，框架将确定Provider的代码库(JAR文件)并验证其签名。通过这种方式，JCA对Provider进行身份验证，并确保只有受信任实体签名的Provider才能加载到JCA中。因此，加密Provider的一个要求是它们必须被签名，如后面的步骤所述。</p>
+<p>另外，每个Provider都应该执行自我完整性检查，以确保包含其代码的JAR文件没有被操纵，试图直接调用Provider方法而不是通过JCA。有关更多信息，请参阅提供程序<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#integritycheck" target="_blank" rel="noopener">如何进行自我完整性检查</a>。</p>
+<p>如果由应用程序绕过JCA直接实例化，为了避免Provider类变的无用，Provider应该执行以下操作：</p>
+<ul>
+<li>Provider包中的所有SPI实现类应声明为final(以便它们不能被子类化)，并且他们(SPI)的实现方法应声明为protected。</li>
+<li>Provider包中的所有与加密相关的辅助类应具有程序包专用作用域，以便它们不能从Provider包外部访问。</li>
+</ul>
+<p>对于可能向美国以外地区出口的Provider，CipherSpi实现必须包括engineGetKeySize方法的实现，能够根据给定Key返回密钥大小。如果对权限策略文件中指定的可用加密强度存在限制，则每个Cipher初始化方法都会调用engineGetKeySize并将结果与​​正在运行的小程序或应用程序的特定位置和环境的最大允许密钥大小进行比较。如果密钥太大，初始化方法会抛出异常。</p>
+<p>Provider可能实现的其他可选功能是</p>
+<ul>
+<li>CipherSpi中engineWrap和engineUnwrap方法。封装密钥可以将密钥从一个地方安全地转移到另一个地方。Java密码体系结构参考指南的“<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#WrapUnwrap" target="_blank" rel="noopener">封装和解封密钥</a>” 部分提供了有关封装和解封密钥的信息。</li>
+<li>一个或多个豁免机制。豁免机制是诸如密钥恢复、密钥托管或密钥弱化之类的操作，如果实施和强制实施，可以对使用它的应用(或小应用)减少加密限制。有关利用免除机制的应用程序的要求的信息，请参阅 Java加密体系结构参考指南中<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#ExemptApps" target="_blank" rel="noopener">如何使应用程序“免于”加密限制</a>。</li>
+</ul>
+<h2 id="第2步：为您的提供商提供一个名称"><a href="#第2步：为您的提供商提供一个名称" class="headerlink" title="第2步：为您的提供商提供一个名称"></a>第2步：为您的提供商提供一个名称</h2><p>确定你的Provider的名字。这是客户端应用程序用来引用您的Provider的名称。</p>
+<h2 id="第3步：编写您的Master类，Provider的一个子类"><a href="#第3步：编写您的Master类，Provider的一个子类" class="headerlink" title="第3步：编写您的Master类，Provider的一个子类"></a>第3步：编写您的Master类，Provider的一个子类</h2><p>第3步是创建java.security.Provider该类的一个子类。</p>
+<p>你的子类应该是一个final类，它的构造函数应该</p>
+<ul>
+<li>调用super，指定提Provider名称(请参阅步骤2)，版本号以及有关Provider和其支持算法的一串信息。例如：<br>   super(“CryptoX”, 1.0, “CryptoX provider v1.0, implementing “ +<pre><code>&quot;RSA encryption and key pair generation, and AES encryption.&quot;);
+</code></pre></li>
+<li>设置Java安全API所需的各种属性的值，以查找Provider实现的加密服务。对于由Provider实现的每个服务，必须有一个名称为服务类型的属性(例如Signature，MessageDigest，KeyPairGenerator，SecureRandom，KeyFactory，KeyStore，CertificateFactory，AlgorithmParameterGenerator，AlgorithmParameters，Cipher，KeyAgreement，KeyGenerator，Mac，SecretKeyFactory或ExemptionMechanism)，其后是.和该服务所应用的算法的名称。该属性值必须指定实现该服务的类的全限定名称。</li>
+<li><p>下面的列表显示了JCA服务的各种类型，其中实际算法名称代替了algName：</p>
+<ul>
+<li>Signature.algName</li>
+<li>MessageDigest.algName</li>
+<li>KeyPairGenerator.algName</li>
+<li>SecureRandom.algName</li>
+<li>AlgorithmParameterGenerator.algName</li>
+<li>AlgorithmParameters.algName</li>
+<li>KeyFactory.algName</li>
+<li>CertificateFactory.algName</li>
+<li>KeyStore.algName</li>
+<li>Cipher.algName</li>
+<li>KeyAgreement.algName</li>
+<li>KeyGenerator.algName</li>
+<li>Mac.algName</li>
+<li>SecretKeyFactory.algName</li>
+<li><p>ExemptionMechanism.algName</p>
+<p>这里面，除了ExemptionMechanism和Cipher，algName、certType或者storeType是算法、证书类型或密钥库类型的“标准”名称。有关应使用的标准名称，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">Java加密体系结构参考指南的附录A</a>.)</p>
+<p>在ExemptionMechanism的情况下，algName指豁免机制，它可以是以下之一的名称：KeyRecovery，KeyEscrow或KeyWeakening。</p>
+<p>在Cipher这种情况下，algName实际上表示转换，并且可以由算法名称、特定模式和填充方案组成。有关详细信息，请参阅 Java加密体系结构参考指南的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A</a>.</p>
+<p>每个属性的值必须是实现指定算法、证书类型或密钥库类型的类的完全限定名。也就是说，它必须是包名，后跟类名，两者之间用句点分隔。</p>
+<p>例如，名为SUN的默认Provider在sun.security.provider包下的DSA类中实现数字签名算法(标准名称为SHA256withDSA)。Provider子类(sun.security.provider包中的Sun类)通过以下方法设置 Signature.SHA256withDSA属性的值为sun.security.provider.DSA：</p>
+<p>  put(“Signature.SHA256withDSA”, “sun.security.provider.DSA”)</p>
+<p>下面的列表显示了可为不同类型的服务定义的更多属性，实际的算法代替algName，证书类型代替certType，密钥库类型代替storetype，属性名代替attrName：</p>
+</li>
+<li><p>Signature.algName [one or more spaces] attrName</p>
+</li>
+<li>MessageDigest.algName [one or more spaces] attrName</li>
+<li>KeyPairGenerator.algName [one or more spaces] attrName</li>
+<li>SecureRandom.algName [one or more spaces] attrName</li>
+<li>KeyFactory.algName [one or more spaces] attrName</li>
+<li>CertificateFactory.certType [one or more spaces] attrName</li>
+<li>KeyStore.storeType [one or more spaces] attrName</li>
+<li>AlgorithmParameterGenerator.algName [one or more spaces] attrName</li>
+<li>AlgorithmParameters.algName [one or more spaces] attrName</li>
+<li>Cipher.algName [one or more spaces] attrName</li>
+<li>KeyAgreement.algName [one or more spaces] attrName</li>
+<li>KeyGenerator.algName [one or more spaces] attrName</li>
+<li>Mac.algName [one or more spaces] attrName</li>
+<li>SecretKeyFactory.algName [one or more spaces] attrName</li>
+<li>ExemptionMechanism.algName [one or more spaces] attrName</li>
+</ul>
+</li>
+</ul>
+<p>每一个algName、certType、storeType或者attrName是算法、证书类型、密钥库类型或属性的“标准”名称。(有关应使用的标准名称，请参阅Java加密体系结构参考指南的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A</a>.)</p>
+<p>对于上述格式的属性，属性的值必须是相应属性的值。(有关每个标准属性的定义，请参阅Java加密体系结构API规范和参考的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A</a>.)</p>
+<p>例如，名为“SUN”的默认Provider在软件中实现SHA256withDSA数字签名算法。在“SUN” Provider的主类中，它通过以下方式设置 Signature.SHA256withDSA ImplementedIn值Software：</p>
+<pre><code>put(&quot;Signature.SHA256withDSA ImplementedIn&quot;, &quot;Software&quot;)
+</code></pre><p>有关更多主类属性设置示例，请参阅以下类的JDK 8源代码：</p>
+<ul>
+<li><a href="http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/9d617cfd6717/src/share/classes/sun/security/provider/Sun.java" target="_blank" rel="noopener">sun.security.provider.Sun</a></li>
+<li><a href="http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/9d617cfd6717/src/share/classes/sun/security/provider/SunEntries.java" target="_blank" rel="noopener">sun.security.provider.SunEntries</a></li>
+<li><a href="http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/9d617cfd6717/src/share/classes/com/sun/crypto/provider/SunJCE.java" target="_blank" rel="noopener">com.sun.crypto.provider.SunJCE</a></li>
+</ul>
+<p>这些文件显示Sun和SunJCE提供程序如何设置属性。</p>
+<h3 id="步骤3-1：密码实现的其他步骤"><a href="#步骤3-1：密码实现的其他步骤" class="headerlink" title="步骤3.1：密码实现的其他步骤"></a>步骤3.1：密码实现的其他步骤</h3><p>如上所述，在Cipher属性的情况中，algName实际上可能代表一个转换。转换是描述操作(或一组操作)的字符串 ，描述Cipher对象对给定输入镜像的操作(一组操作)。转换总是包含加密算法的名称(例如 AES)，并且可能后跟模式和填充方案。</p>
+<p>转型的形式是：</p>
+<ul>
+<li>算法/模式/填充，或</li>
+<li>算法</li>
+</ul>
+<p>(在后一种情况下，使用特定Provider的模式和填充方案默认值)。例如，以下是有效的转换：</p>
+<pre><code>Cipher c = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;); 
+</code></pre><p>当以流密码模式(例如，AES输入CFB或OFB 模式)请求分组密码时，客户端可以选择指定一次要处理的比特数，方法是将该数字附加到模式名称中，如下面的示例变换所示：</p>
+<pre><code>Cipher c1 = Cipher.getInstance(&quot;AES/CFB8/NoPadding&quot;);
+Cipher c2 = Cipher.getInstance(&quot;AES/OFB32/PKCS5Padding&quot;);
+</code></pre><p>如果一个号码不遵循流密码模式，则使用Provider特定的默认值。(例如，SunJCE 提供程序使用默认的64位。)</p>
+<p>Provider可以为算法/模式/填充的每个组合提供单独的类。或者，Provider可以决定提供更多的泛型类，表示与算法或算法/模式或 算法//填充(注意双斜杠)相对应的子变换; 在这种情况下，所请求的模式和/或填充由以下Cipher的getInstance方法自动设置，该方法调用Provider的Cipher子类的engineSetMode和engineSetPadding方法。</p>
+<p>也就是说，Provider主类中Cipher的属性可能具有下表中显示的格式之一。</p>
+<table>
+<thead>
+<tr>
+<th>Cipher Property Format</th>
+<th style="text-align:right">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cipher.algName</td>
+<td style="text-align:right">Provider的CipherSpi子类实现algName与附加的模式和填充</td>
+</tr>
+<tr>
+<td>Cipher.algName/mode</td>
+<td style="text-align:right">Provider的CipherSpi子类以特定的模式实现algName，与附加的填充方式</td>
+</tr>
+<tr>
+<td>Cipher.algName//padding</td>
+<td style="text-align:right">Provider的CipherSpi子类以特定的填充实现algName，与附加的模式</td>
+</tr>
+<tr>
+<td>Cipher.algName/mode/padding</td>
+<td style="text-align:right">Provider的CipherSpi子类以特定的模式和填充实现algName</td>
+</tr>
+</tbody>
+</table>
+<p>(见Java加密体系结构参考指南附录A中的标准算法名称，模式和填充。)</p>
+<p>例如，Provider可以提供实现AES/ECB/PKCS5Padding的CipherSpi子类，实现AES/CBC/PKCS5Padding的子类 ，实现AES/CFB/PKCS5Padding的子类，以及实现AES/OFB/PKCS5Padding的子类。该Provider在其主类中将具有以下Cipher属性：</p>
+<ul>
+<li>Cipher.AES/ECB/PKCS5Padding</li>
+<li>Cipher.AES/CBC/PKCS5Padding</li>
+<li>Cipher.AES/CFB/PKCS5Padding</li>
+<li>Cipher.AES/OFB/PKCS5Padding</li>
+</ul>
+<p>另一个Provider可以为上述每种模式实现一个类(即，ECB的一个类，CBC的一个，CFB的一个，OFB的一个类)，PKCS5Padding的一个类以及一个CipherSpi子类的普通AES类。该Provider在其主类中将具有以下Cipher属性：</p>
+<ul>
+<li>Cipher.AES</li>
+<li>Cipher.AES SupportedModes<ul>
+<li>Example: “ECB|CBC|CFB|OFB”</li>
+</ul>
+</li>
+<li>Cipher.AES SupportedPaddings<ul>
+<li>Example: “NOPADDING|PKCS5Padding”</li>
+</ul>
+</li>
+</ul>
+<p>Cipher引擎类的getInstance工厂方法遵循以下规则以实例化Provider对应“算法” 转换的CipherSpi实现：</p>
+<ol>
+<li><p>检查Provider是否注册了指定“算法”的CipherSpi子类 。</p>
+<p> 如果答案为YES，则实例化此类，使用其模式和填充方案默认值(由Provider提供)。</p>
+<p> 如果答案为否，则抛出NoSuchAlgorithmException异常。</p>
+</li>
+</ol>
+<p>Cipher引擎类的getInstance工厂方法遵循以下规则以实例化Provider对应“算法/模式/填充”转换的CipherSpi实现：</p>
+<ol>
+<li><p>检查Provider是否注册了指定的“算法/模式/填充”转换的CipherSpi子类 。</p>
+<p> 如果答案是YES，则将其实例化。</p>
+<p> 如果答案为否，请转至下一步。</p>
+</li>
+<li><p>检查Provider是否注册了“算法/模式”子转换的CipherSpi子类 。</p>
+<p> 如果答案为YES，则将其实例化并调用新实例的engineSetPadding(padding)。 </p>
+<p> 如果答案为否，请转至下一步。</p>
+</li>
+<li><p>检查Provider是否注册了“算法//填充”子转换(注意双斜杠)的CipherSpi子类 。</p>
+<p> 如果答案为YES，则将其实例化并调用新实例engineSetMode(mode)。</p>
+<p> 如果答案为否，请转至下一步。</p>
+</li>
+<li><p>检查Provider是否注册了“算法”子转换的CipherSpi子类 。</p>
+<p> 如果答案为YES，则将其实例化，然后调用新实例engineSetMode(mode)和engineSetPadding(padding) 。</p>
+<p> 如果答案为否，则抛出NoSuchAlgorithmException异常。</p>
+</li>
+</ol>
+<h2 id="第4步：编译你的代码"><a href="#第4步：编译你的代码" class="headerlink" title="第4步：编译你的代码"></a>第4步：编译你的代码</h2><p>创建实现代码(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step1" target="_blank" rel="noopener">步骤1</a>)后，为您的Provider指定一个名称(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step2" target="_blank" rel="noopener">步骤2</a>)，并创建主类(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step3" target="_blank" rel="noopener">步骤3</a>)，使用Java编译器编译您的文件。</p>
+<h2 id="第5步：将您的提供程序放入Jar文件中"><a href="#第5步：将您的提供程序放入Jar文件中" class="headerlink" title="第5步：将您的提供程序放入Jar文件中"></a>第5步：将您的提供程序放入Jar文件中</h2><p>将您的Provider代码放入JAR文件中，以准备在下一步对其进行签名。有关jar工具的更多信息，请参阅jar(适用于<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jar.html" target="_blank" rel="noopener">Solaris，Linux或Mac OS X</a>)(适用于<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jar.html" target="_blank" rel="noopener">Microsoft Windows</a>)。</p>
+<pre><code>jar cvf &lt;JAR file name&gt; &lt;list of classes, separated by spaces&gt;
+</code></pre><p>这个命令通过包含指定类的指定名称创建一个JAR文件。</p>
+<h2 id="第6步：签名JAR文件"><a href="#第6步：签名JAR文件" class="headerlink" title="第6步：签名JAR文件"></a>第6步：签名JAR文件</h2><p>如果您的Provider通过Cipher,KeyAgreement,KeyGenerator,Mac,或SecretKeyFactory类提供加密算法，则需要签名JAR文件，以便JCA可以在运行时验证代码。有关详细信息，请参阅步骤<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step1a" target="_blank" rel="noopener">1a</a>。如果你不提供这种类型的实现，你可以跳过这一步。</p>
+<h3 id="步骤6-1：获取代码签名证书"><a href="#步骤6-1：获取代码签名证书" class="headerlink" title="步骤6.1：获取代码签名证书"></a>步骤6.1：获取代码签名证书</h3><p>下一步是申请一个代码签名证书，以便您可以在测试之前使用它来签署您的Provider。该证书可用于测试和生产。有效期5年。</p>
+<p>以下是获取代码签名证书的步骤。有关keytool工具的更多信息，请参阅 keytool(<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/keytool.html" target="_blank" rel="noopener">适用于Solaris，Linux或Mac OS X</a>)(<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/keytool.html" target="_blank" rel="noopener">适用于Microsoft Windows</a>)。</p>
+<ol>
+<li><p>使用keytool生成一个DSA密钥对，以DSA算法为例：</p>
+<pre><code>keytool -genkeypair -alias &lt;alias&gt; \
+   -keyalg DSA -keysize 1024 \
+   -dname &quot;cn=&lt;Company Name&gt;, \
+   ou=Java Software Code Signing,\
+   o=Sun Microsystems Inc&quot; \
+   -keystore &lt;keystore file name&gt;\
+   -storepass &lt;keystore password&gt;
+</code></pre><p> 这将生成DSA密钥对(公钥和相关的私钥)并将其存储在指定密钥库中的条目中。公钥存储在自签名证书中。随后可以使用指定的别名访问密钥库条目。</p>
+<p> 尖括号中的选项值(“&lt;”和“&gt;”)表示必须提供的实际值。例如，<alias>必须替换为您希望用于未来引用新生成的密钥库条目的任何别名，并且<keystore file="" name=""> 必须替换为要使用的密钥库的名称。 注意：不要用尖括号包围实际值。例如，如果您希望使用别名myTestAlias，请-alias按如下所示指定选项：</keystore></alias></p>
+<pre><code>-alias myTestAlias
+</code></pre><p> 如果您指定一个尚不存在的密钥库，它将被创建。</p>
+<p> 注意：如果您键入的命令行不允许与您要执行的keytool -genkeypair命令(例如，如果您正在键入Microsoft Windows DOS提示符)一样长，则可以创建并执行包含命令纯文本批处理文件。也就是说，创建一个新的文本文件，只包含完整的keytool -genkeypair 命令。(请记住在一行中输入全部内容。)以.bat扩展名保存文件。然后在你的DOS窗口中输入文件名(必要时使用它的路径)。这将导致批处理文件中的命令被执行。</p>
+</li>
+<li><p>使用keytool生成证书签名请求(CSR)。</p>
+<p> keytool -certreq -alias <alias> \</alias></p>
+<pre><code>-file &lt;csr file name&gt; \
+-keystore &lt;keystore file name&gt; \
+-storepass &lt;keystore password&gt;
+</code></pre><p> 这里<alias>是上一步中创建的DSA密钥对条目的别名。该命令使用PKCS＃10格式生成证书签名请求(CSR)。它将CSR存储在名称指定的<csr file="" name="">文件中 。</csr></alias></p>
+</li>
+<li><p>将包含联系信息和其他必需的文档的CSR发送给JCA代码签名认证中心。请参阅<a href="http://www.oracle.com/technetwork/java/javase/tech/getcodesigningcertificate-361306.html#jcacodesigning" target="_blank" rel="noopener">JCA代码签名认证机构</a>以获取联系信息。</p>
+</li>
+<li>JCA代码签名认证机构收到您的电子邮件后，他们会通过电子邮件向您发送请求编号。一旦你收到这个请求号码，你应该打印，填写并发送CSP认证表格。请参阅为<a href="http://www.oracle.com/technetwork/java/javase/tech/getcodesigningcertificate-361306.html#sendingcertificationform" target="_blank" rel="noopener">CSP发送认证表格</a>以获取联系信息。</li>
+<li><p>使用keytool导入从CA接收的证书。</p>
+<p> 从JCA代码签名认证中心收到两个证书后，您可以使用keytool将它们导入到密钥库中。</p>
+<p> 首先将CA的证书导入为“可信证书”：</p>
+<pre><code>keytool -import -alias &lt;alias for the CA cert&gt; \
+    -file &lt;CA cert file name&gt; \
+    -keystore &lt;keystore file name&gt; \
+    -storepass &lt;keystore password&gt;
+</code></pre><p> 然后导入代码签名证书：</p>
+<pre><code>keytool -import -alias &lt;alias&gt; \
+    -file &lt;code-signing cert file name&gt; \
+    -keystore &lt;keystore file name&gt; \
+    -storepass &lt;keystore password&gt;
+</code></pre><p> 在这里，<alias>与您在步骤1中创建DSA密钥对的过程中创建的别名相同。该命令通过指定<alias>将密钥库条目中的自签名证书替换JCA代码签名证书颁发机构签署自签名证书。</alias></alias></p>
+</li>
+</ol>
+<p>现在您的密钥库中有来自JCA(JCA代码签名证书颁发机构)信任的实体的证书，您可以将Provider代码放入JAR文件中(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step5" target="_blank" rel="noopener">步骤5</a>)，然后使用该证书签署JAR文件(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step62" target="_blank" rel="noopener">步骤6.2</a>)。</p>
+<h3 id="步骤6-2：签署您的提供商"><a href="#步骤6-2：签署您的提供商" class="headerlink" title="步骤6.2：签署您的提供商"></a>步骤6.2：签署您的提供商</h3><p>使用在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step6" target="_blank" rel="noopener">步骤6</a>中获取的代码签名证书签署步骤5中创建的JAR文件。有关jarsigner工具的更多信息，请参阅jarsigner(<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jarsigner.html" target="_blank" rel="noopener">适用于Solaris，Linux或Mac OS X</a>)(<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html" target="_blank" rel="noopener">适用于Microsoft Windows</a>)。</p>
+<pre><code>jarsigner -keystore &lt;keystore file name&gt; \
+          -storepass &lt;keystore password&gt; \
+          &lt;JAR file name&gt; &lt;alias&gt;
+</code></pre><p>这里<alias>是包含从JCA代码签名证书颁发机构收到的代码签名证书的条目的密钥库的别名(与步骤6.1中的命令中指定的别名相同)。</alias></p>
+<p>您可以通过以下方式测试签名的验证：</p>
+<pre><code>jarsigner -verify &lt;JAR file name&gt; 
+</code></pre><p>如果验证成功，将显示“jar verified”文本。</p>
+<p><strong>注意</strong>：如果您将已签名的JCE Provider捆绑为RIA(小程序或webstart应用程序)的一部分，为获得最佳用户体验，应该使用applet或webstart应用程序签名相同的证书/密钥为JCE Provider Jar申请第二个签名。请参阅 <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/deploy/index.html" target="_blank" rel="noopener">Java Platform，Standard Edition部署指南</a>以获取有关部署RIA的更多信息以及jarsigner(<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jarsigner.html" target="_blank" rel="noopener">Solaris，Linux，Mac OS X</a>或 <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html" target="_blank" rel="noopener">Windows</a>)手册页获取将多个签名应用于JAR文件的信息的更多信息。</p>
+<h2 id="第7步：准备测试"><a href="#第7步：准备测试" class="headerlink" title="第7步：准备测试"></a>第7步：准备测试</h2><p>接下来的步骤介绍如何安装和配置新Provider，以便通过JCA获取。</p>
+<h3 id="步骤7-1：安装提供程序"><a href="#步骤7-1：安装提供程序" class="headerlink" title="步骤7.1：安装提供程序"></a>步骤7.1：安装提供程序</h3><p>为了准备测试您的Provider，您必须按照客户希望使用它的方式进行安装。安装程序使Java安全性能够在客户端请求它们时找到您的算法实现。</p>
+<p>安装提供程序分两步完成：安装Provider包类和配置Provider。</p>
+<h4 id="安装提供程序类"><a href="#安装提供程序类" class="headerlink" title="安装提供程序类"></a>安装提供程序类</h4><p>你必须做的第一件事是让你的类可用，以便在需要时可以找到它们。您将Provider类作为JAR(Java归档)文件封装。</p>
+<p>有两种可能的方法来安装Provider类：</p>
+<ul>
+<li>将包含Provider类的JAR文件安装为安装或捆绑的扩展。</li>
+<li>将包含Provider类的JAR文件放在您的CLASSPATH中。</li>
+</ul>
+<p>如果Provider JAR文件放置到安装扩展的JAR文件的标准位置，则它将被视为已安装的扩展：</p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: <java-home>/lib/ext</java-home></li>
+<li>Windows: <java-home>\lib\ext</java-home></li>
+</ul>
+<p>这里<java-home>是指安装运行时软件的目录，它是Java运行时环境(JRE)的顶层目录或 Java SE(JDK)软件中的jre目录。例如，如果您在Solaris，Linux或Mac OS X上名为/home/user1/jdk的目录中或在Microsoft Windows上名为C:\jdk的目录中安装了JDK ，则需要在以下目录中安装JAR文件：</java-home></p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: /home/user1/jdk/jre/lib/ext</li>
+<li>Windows: C:\jdk\jre\lib\ext</li>
+</ul>
+<p>同样，如果您将JRE安装Solaris，Linux或Mac OS X上名为/home/user1/jre的目录中，或者在Microsoft Windows上名为C:\jre的目录中的，则需要将JAR文件安装在以下目录中：</p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: /home/user1/jre/lib/ext</li>
+<li>Windows: C:\jre\lib\ext</li>
+</ul>
+<p>有关安装的扩展的更多信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/extensions/spec.html#installed" target="_blank" rel="noopener">安装的扩展</a>。</p>
+<p>有关捆绑扩展的更多信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/extensions/spec.html#bundled" target="_blank" rel="noopener">捆绑扩展</a>。</p>
+<h4 id="配置提供程序"><a href="#配置提供程序" class="headerlink" title="配置提供程序"></a>配置提供程序</h4><p>下一步是将Provider添加到已批准的Provider列表中。这是通过编辑安全属性文件静态完成的</p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: <java-home>/lib/security/java.security</java-home></li>
+<li>Windows: <java-home>\lib\security\java.security</java-home></li>
+</ul>
+<p>这里<java-home>指的是安装的JRE目录。例如，如果您在Solaris，Linux或Mac OS X上名为/home/user1/jdk的目录中或在Microsoft Windows上名为C:\jdk的目录中安装了JDK，则需要编辑以下文件：</java-home></p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: /home/user1/jdk/jre/lib/security/java.security</li>
+<li>Windows: C:\jdk\jre\lib\security\java.security</li>
+</ul>
+<p>同样，如果您将JRE安装Solaris，Linux或Mac OS X上名为/home/user1/jre的目录中，或者在Microsoft Windows上名为C:\jre的目录中的，则需要编辑此文件：</p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: /home/user1/jre/lib/security/java.security</li>
+<li>Windows: C:\jre\lib\security\java.security</li>
+</ul>
+<p>对于每个Provider，这个文件应该有以下形式的声明：</p>
+<pre><code>security.provider.n=masterClassName  
+</code></pre><p>这声明了一个Provider，并且指定了它的优先顺序n。优先顺序是在没有请求特定Provider时，搜索请求算法的Provider顺序。顺序以1为基础; 1是最优选的，然后是2，依此类推。</p>
+<p>masterClassName必须指定您在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step3" target="_blank" rel="noopener">步骤3</a>中实现的Provider“主类”的完全限定名称。该类总是Provider类的一个子类。</p>
+<p>Java标准提供了名为SUN，SunRsaSign和SunJCE的Provider，这些Provider在java.security属性文件中自动配置为静态Provider ，如下所示：</p>
+<pre><code>security.provider.2 = sun.security.provider.Sun
+security.provider.3 = sun.security.rsa.SunRsaSign
+security.provider.4 = sun.security.provider.SunJCE
+</code></pre><p>(SunProvider的主类是sun.security.provider包中的Sun类)</p>
+<p>JCA提供程序SunJCE以及Java平台附带的其他安全相关Provider也会自动配置为静态Provider。</p>
+<p>要利用另一个JCA Provider，请添加一行注册备用Provider的语句，并为其提供比SUN和SunRsaSign Provider更低的优先顺序。</p>
+<p>假设您的主类是com.cryptox.provider包中的CryptoX类，并且您希望使您的Provider成为第四个优先顺序。为此，请编辑java.security文件，如下所示：</p>
+<pre><code>security.provider.2 = sun.security.provider.Sun
+security.provider.3 = sun.security.rsa.SunRsaSign
+security.provider.4 = com.cryptox.provider.CryptoX
+security.provider.5 = sun.security.provider.SunJCE
+</code></pre><p>注意：Provider也可以动态注册。要做到这一点，程序(例如你的测试程序，可以在步骤8中编写)可以调用Security类中的方法addProvider或insertProviderAt方法。这种类型的注册不是持久的，只能通过授予以下权限的代码完成：</p>
+<pre><code>java.security.SecurityPermission &quot;insertProvider.{name}&quot;
+</code></pre><p>这里{name}被实际Provider名称取代。</p>
+<p>例如，如果Provider名称是“MyJCE”，并且Provider代码位于/localWork目录中myjce_provider.jar文件中，则以下是示例策略文件授予该权限的grant语句：</p>
+<pre><code>grant codeBase &quot;file:/localWork/myjce_provider.jar&quot; {
+    permission java.security.SecurityPermission
+        &quot;insertProvider.MyJCE&quot;;
+};
+</code></pre><h3 id="步骤7-2：设置Provider权限"><a href="#步骤7-2：设置Provider权限" class="headerlink" title="步骤7.2：设置Provider权限"></a>步骤7.2：设置Provider权限</h3><p>当Provider不是安装的扩展时，如果安装了安全管理器，必须授予小程序或应用程序运行的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/permissions.html" target="_blank" rel="noopener">权限</a>。每当小应用程序运行时都会安装安全管理器，并且可以通过应用程序本身的代码或通过命令行参数为应用程序安装安全管理器。由于默认系统<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/PolicyFiles.html" target="_blank" rel="noopener">策略文件</a>授予安装的扩展的所有权限，因此不需要授予安装的扩展权限。</p>
+<p>只要客户端没有将您的Provider安装为已安装的扩展，您的Provider可能需要在客户端环境中授予其以下权限：</p>
+<ul>
+<li>java.lang.RuntimePermission 获得类保护域。Provider可能需要在进行自我完整性检查的过程中获得自己的保护域。</li>
+<li>java.security.SecurityPermission 设置Provider属性。</li>
+</ul>
+<p>当安装了安全管理器并且Provider不是已安装的扩展时，为了确保您的Provider运行，您需要测试这样的安装和执行环境。另外，在测试之前，您需要为您的Provider和使用的其他Provider授予适当的权限。例如，向名称为“MyJCE”且其代码位于myjce_provider.jar下方的Provider授予许可权的样本语句。这样的声明可以出现在政策文件中。在这个例子中，假定myjce_provider.jar文件在/localWork目录中。</p>
+<pre><code>grant codeBase &quot;file:/localWork/myjce_provider.jar&quot; {
+   permission java.lang.RuntimePermission &quot;getProtectionDomain&quot;;
+   permission java.security.SecurityPermission
+       &quot;putProviderProperty.MyJCE&quot;;
+};
+</code></pre><h2 id="第8步：编写和编译您的测试程序"><a href="#第8步：编写和编译您的测试程序" class="headerlink" title="第8步：编写和编译您的测试程序"></a>第8步：编写和编译您的测试程序</h2><p>编写和编译一个或多个测试程序，以测试您的Provider集成到安全API以及其算法的正确性。创建所需的任何支持文件，例如要加密的测试数据。</p>
+<p>您的程序应该执行的第一个测试是确保找到您的Provider，并确保其名称，版本号和其他信息与预期一致。为此，您可以编写如下所示的代码，将您的Provider名称替换为 MyPro：</p>
+<pre><code>import java.security.*;
+
+Provider p = Security.getProvider(&quot;MyPro&quot;);
+
+System.out.println(&quot;MyPro provider name is &quot; + p.getName());
+System.out.println(&quot;MyPro provider version # is &quot; + p.getVersion());
+System.out.println(&quot;MyPro provider info is &quot; + p.getInfo());
+</code></pre><p>接下来，你应该确保你的服务被找到。例如，如果您实现了AES加密算法，你可以检查以确保通过使用下面的代码请求时可以找到服务(请再次将您的Provider名称替换为“MyPro”)： </p>
+<pre><code>Cipher c = Cipher.getInstance(&quot;AES&quot;, &quot;MyPro&quot;);
+
+System.out.println(&quot;My Cipher algorithm name is &quot; + c.getAlgorithm());
+</code></pre><p>如果在getInstance中未指定Provider名称，则将按照优先顺序(请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Configuring" target="_blank" rel="noopener">配置Provider</a>)搜索所有已注册的Provider，直到找到实现该算法的一个。</p>
+<p>如果您的Provider 实现豁免机制，您应该编写一个使用豁免机制的测试小程序或应用程序。这样一个applet/应用程序也需要签名，并且需要有一个“许可策略文件”与之捆绑在一起。有关创建和测试此类应用程序的完整信息，请参阅Java密码体系结构参考指南中<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#ExemptApps" target="_blank" rel="noopener">如何使应用程序“免于”的加密限制</a>。</p>
+<h2 id="第9步：运行您的测试程序"><a href="#第9步：运行您的测试程序" class="headerlink" title="第9步：运行您的测试程序"></a>第9步：运行您的测试程序</h2><p>运行你的测试程序。调试您的代码并根据需要继续测试。如果Java安全API找不到您的算法，请查看上述步骤并确保它们全部完成。</p>
+<p>请确保使用不同的安装选项(例如，使Provider成为安装的扩展程序或将其放置在类路径中)和执行环境(带有或不带有安全管理器运行)对程序进行测试。安装选项在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step71" target="_blank" rel="noopener">步骤7.1</a>中讨论。尤其是，您需要确保在安装安全管理器并且Provider不是已安装的扩展时您的Provider可以运行——因此Provider必须有授予它的权限; 因此，您需要在向您的Provider和其使用的任何其他Provider授予必需的权限后，测试这样的安装和执行环境，如<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step72" target="_blank" rel="noopener">步骤7.2</a>中所述。</p>
+<p>如果在测试过程中发现代码需要修改，请进行更改，重新编译(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step4" target="_blank" rel="noopener">步骤4</a>)，将更新的Provider代码放入JAR文件(步骤6)，必要时签名JAR文件(步骤6.2)，重新安装Provider(步骤7.1)，如果需要修复或添加权限(步骤7.2)，然后重新测试您的程序。根据需要重复这些步骤。</p>
+<h2 id="第10步：如果需要，申请美国政府出口许可"><a href="#第10步：如果需要，申请美国政府出口许可" class="headerlink" title="第10步：如果需要，申请美国政府出口许可"></a>第10步：如果需要，申请美国政府出口许可</h2><p>所有Provider可能出口到美国以外的美国Provider都应向美国商务部工业和安全局申请出口许可。请咨询您的出口顾问以获取更多信息。</p>
+<p>注意：如果您的Provider调用Cipher.getInstance()并且返回的Cipher对象需要执行强大的加密，不管用户下载的权限策略文件允许哪些加密强度，你需要包含cryptoPerms权限策略文件，为你的Provider实际捆绑在Jar文件并为所需的加密强度指定适当的权限。此文件的必要性就像小应用程序和应用程序“免于”加密限制的要求必须cryptoPerms在他们的JAR文件中包含权限策略文件。有关创建和加入上述文件的详细信息，请参阅Java加密体系结构参考指南如何从加密应用程序的限制“豁免”。</p>
+<p>则你应该将捆绑到JAR文件中的权限策略文件的副本包含在您的Provider，。</p>
+<p>以下是两个可能有用的网址：</p>
+<p>美国商务部：<a href="http://www.commerce.gov/" target="_blank" rel="noopener">http：//www.commerce.gov</a><br>工业和安全局：<a href="http://www.bis.doc.gov/" target="_blank" rel="noopener">http：//www.bis.doc.gov</a></p>
+<h2 id="第11步：记录您的提供商及其支持的服务"><a href="#第11步：记录您的提供商及其支持的服务" class="headerlink" title="第11步：记录您的提供商及其支持的服务"></a>第11步：记录您的提供商及其支持的服务</h2><p>下一步是为您的客户编写文档。至少，您需要指定：</p>
+<ul>
+<li>程序应该用来引用你的Provider的名称。<strong>注意</strong>：在撰写本文时，Provider名称搜索区分大小写。也就是说，如果您的主类将您的Provider名称指定为“CryptoX”，但用户请求“CRYPTOx”，则不会找到您的Provider。此行为将来可能会发生变化，但现在一定要警告您的客户使用您指定的确切名称。</li>
+<li>您Provider实现的算法类型和其他服务。</li>
+<li>有关安装Provider的说明，类似于<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step71" target="_blank" rel="noopener">步骤7.1</a>中介绍的，只是信息和示例应该特定于您的Provider。</li>
+<li>如果它未作为已安装的扩展并且安全管理器在运行，则您的Provider将需要权限，如<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step72" target="_blank" rel="noopener">步骤7.2</a>中所述。</li>
+</ul>
+<p>另外，您的文档应该指定客户感兴趣的任何其他内容，例如任何默认的算法参数。</p>
+<h3 id="Message-Digests-and-MAC"><a href="#Message-Digests-and-MAC" class="headerlink" title="Message Digests and MAC"></a>Message Digests and MAC</h3><p>对于每个消息摘要和MAC算法，指出您的实现是否可以复制。这在技术上不是必要的，但是通过告诉他们是否可以通过克隆来实现中间消息摘要或MAC可以节省客户一些时间和编码。不知道MessageDigest或Mac实现是否可克隆的客户，可以通过尝试克隆该对象并捕获潜在的异常来找出问题，如以下示例所示：</p>
+<pre><code>try {
+    // try and clone it
+    /* compute the MAC for i1 */
+    mac.update(i1);
+    byte[] i1Mac = mac.clone().doFinal();
+
+    /* compute the MAC for i1 and i2 */
+    mac.update(i2);
+    byte[] i12Mac = mac.clone().doFinal();
+
+    /* compute the MAC for i1, i2 and i3 */
+    mac.update(i3);
+    byte[] i123Mac = mac.doFinal();
+} catch (CloneNotSupportedException cnse) {
+    // have to use an approach not involving cloning
+} 
+</code></pre><p>这里：</p>
+<ul>
+<li>mac是他们通过调用Mac.getInstance请求时收到的MAC对象，</li>
+<li>i1，i2，i3是输入字节数组，并且</li>
+<li>他们想要计算单独的哈希值：<ul>
+<li>i1</li>
+<li>i1 and i2</li>
+<li>i1, i2, and i3</li>
+</ul>
+</li>
+</ul>
+<h3 id="Key-Pair-Generators"><a href="#Key-Pair-Generators" class="headerlink" title="Key Pair Generators"></a>Key Pair Generators</h3><p>对于密钥对生成器算法，如果客户端未明确初始化密钥对生成器(通过调用initialize方法)，则每个Provider都必须提供并说明默认初始化。例如，由SunJCE Provider提供的Diffie-Hellman密钥对生成器使用1024位的默认主模数大小(keysize)。</p>
+<h3 id="Key-Factories"><a href="#Key-Factories" class="headerlink" title="Key Factories"></a>Key Factories</h3><p>Provider应记录其(秘密)密钥工厂支持的所有密钥规范。</p>
+<h3 id="Algorithm-Parameter-Generators"><a href="#Algorithm-Parameter-Generators" class="headerlink" title="Algorithm Parameter Generators"></a>Algorithm Parameter Generators</h3><p>如果客户端未明确初始化算法参数生成器(通过调用AlgorithmParameterGenerator引擎类中的init方法)，则每个Provider都必须提供并记录默认初始化。例如，SunJCE Provider使用1024位的默认主模数大小(keysize)来生成Diffie-Hellman参数，Sun提供默认模数主数据大小为1024位以生成DSA参数。</p>
+<h3 id="Signature-Algorithms"><a href="#Signature-Algorithms" class="headerlink" title="Signature Algorithms"></a>Signature Algorithms</h3><p>如果您实现了一个签名算法，则应记录签名(由sign方法生成)的编码格式 。例如，由“SUN” Provider提供的SHA256withDSA签名算法将该签名编码为包含两个整数r和s的标准ASN.1 SEQUENCE。</p>
+<h3 id="随机数生成-SecureRandom-算法"><a href="#随机数生成-SecureRandom-算法" class="headerlink" title="随机数生成(SecureRandom)算法"></a>随机数生成(SecureRandom)算法</h3><p>对于随机数生成算法，提供生成的数字多么“随机”的信息，以及随机数生成器自己种子时的种子质量。另请注意，当SecureRandom对象(及其封装的SecureRandomSpi实现对象)被反序列化时会发生什么情况：如果对恢复对象的nextBytes方法(调用engineNextBytes封装的SecureRandomSpi对象的方法)的后续调用产生完全相同(随机)的字节原始对象会，然后让用户知道如果这种行为是不受欢迎的，他们应该通过调用其setSeed 方法来对恢复的随机对象进行播种。</p>
+<h3 id="证书工厂"><a href="#证书工厂" class="headerlink" title="证书工厂"></a>证书工厂</h3><p>Provider应记录工厂可以创建哪些类型的证书(及其版本号，如果相关)。</p>
+<h3 id="密钥库"><a href="#密钥库" class="headerlink" title="密钥库"></a>密钥库</h3><p>Provider应记录有关密钥库实施的任何相关信息，例如其底层数据格式。</p>
+<h2 id="第12步：使您的类文件和文档可供客户使用"><a href="#第12步：使您的类文件和文档可供客户使用" class="headerlink" title="第12步：使您的类文件和文档可供客户使用"></a>第12步：使您的类文件和文档可供客户使用</h2><p>在撰写，配置，测试，安装和记录您的Provider软件后，请将文档提供给您的客户。</p>
+<h1 id="提供者如何进行自我完整性检查"><a href="#提供者如何进行自我完整性检查" class="headerlink" title="提供者如何进行自我完整性检查"></a>提供者如何进行自我完整性检查</h1><p>每个Provider都应该进行自我完整性检查，以确保包含其代码的JAR文件没有被篡改，例如试图直接调用Provider方法而不是通过JCA。提供加密服务实现(Cipher, KeyAgreement, KeyGenerator, MAC或SecretKeyFactory)的Provider必须进行数字签名，并且应使用“可信”证书颁发机构颁发的证书进行签名。目前，以下两个认证机构被认为是“可信”的：</p>
+<ul>
+<li>Sun Microsystems’ JCA Code Signing CA, and</li>
+<li>IBM JCA Code Signing CA.</li>
+</ul>
+<p>请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step62" target="_blank" rel="noopener">步骤6.2</a>以获取有关如何从Sun Microsystems的JCA代码签名CA获得代码签名证书以及该CA证书的详细信息。</p>
+<p>从证书颁发机构获得签名证书后，Provider包应在其自身内嵌入其自己的签名证书字节，例如，下面的章节“识别每个签名者并确定是否值得信任”中引用的bytesOfProviderCert数组。在运行时，嵌入式证书将用于确定Provider代码是否可信。</p>
+<p>Provider可以用来检查自己的完整性的基本方法是：</p>
+<ol>
+<li>确定包含Provider代码的JAR文件的URL，以及</li>
+<li>验证JAR文件的数字签名以确保JAR文件的每个条目中至少有一个签​​名者是可信的。</li>
+</ol>
+<p>每一步在下面的章节中描述：</p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#SampleCodeNotes" target="_blank" rel="noopener">示例代码注释</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#FindJFBasics" target="_blank" rel="noopener">查找Provider JAR文件：基础知识</a><ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#FindJFURL" target="_blank" rel="noopener">确定Provider JAR文件URL</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#CreateJarFile" target="_blank" rel="noopener">创建一个JAR文件参考文件JarFile</a></li>
+</ul>
+</li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#VerifyJFBasics" target="_blank" rel="noopener">验证Provider JAR文件：基础知识</a><ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#VerifySetup" target="_blank" rel="noopener">验证设置</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#CheckJARFile" target="_blank" rel="noopener">JAR文件签名检查</a></li>
+</ul>
+</li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#VerifySigs" target="_blank" rel="noopener">验证签名</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#JCEAuthTrust" target="_blank" rel="noopener">确保签署者受信任</a><ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#GetSignerCerts" target="_blank" rel="noopener">获取证书列表</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#ChainRoots" target="_blank" rel="noopener">识别每个签名者并确定是否值得信任</a></li>
+</ul>
+</li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#myJCECodeNotes" target="_blank" rel="noopener">关于myJCE示例代码的注释</a></li>
+</ul>
+<h2 id="示例代码注释"><a href="#示例代码注释" class="headerlink" title="示例代码注释"></a>示例代码注释</h2><p><strong>注意</strong>：示例代码<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/MyJCE.java" target="_blank" rel="noopener">MyJCE.java</a>是实现这些步骤的完整代码示例。您可以下载此代码以供参考。该章节将跟踪这些概念如何在示例代码中实现。</p>
+<p><strong>重要注意事项</strong>：在JCE 1.2.x的非捆绑版本(与JDK 1.2.x和1.3.x一起使用)中，Provider需要包含验证JCA框架的代码，以确保它们所插入的JCA的完整性和真实性。在JDK 6和更高版本中，这不再是必需的。</p>
+<p>其中一个含义是，为JCE 1.2.2编写的Provider在JDK 6中不起作用，因为Provider的JCE框架身份验证检查不起作用; JCE框架代码不再是Provider期望的代码。如果你希望你的Provider只能与JDK 6一起使用，它不应该有验证JCE框架的代码。另一方面，如果您希望您的Provider与JCE 1.2.2和JDK 6一起工作，请添加条件语句。这样，只有在提供者使用JCE 1.2.2运行时，才会执行Provider验证JCE框架的代码。以下是示例代码：</p>
+<pre><code>Class cipherCls = Class.forName(&quot;javax.crypto.Cipher&quot;);
+
+CodeSource cs = cipherCls.getProtectionDomain().getCodeSource();
+if (cs != null) {
+    // Authenticate JCE framework
+     . . .
+} 
+</code></pre><p>查找提供程序JAR文件：基础知识</p>
+<h2 id="查找Provider-JAR文件：基础知识"><a href="#查找Provider-JAR文件：基础知识" class="headerlink" title="查找Provider JAR文件：基础知识"></a>查找Provider JAR文件：基础知识</h2><h3 id="确定提供商的JAR文件URL"><a href="#确定提供商的JAR文件URL" class="headerlink" title="确定提供商的JAR文件URL"></a>确定提供商的JAR文件URL</h3><p>Provider JAR文件的URL可以通过确定Provider CodeSource然后调用该CodeSource的getLocation方法来获得。</p>
+<pre><code>URL providerURL = (URL) AccessController.doPrivileged(
+    new PrivilegedAction) {
+        public Object run() {
+            CodeSource cs =
+                MyJCE.class.getProtectionDomain().getCodeSource();
+            return cs.getLocation();
+        }
+    });
+</code></pre><h3 id="创建一个JAR文件参考文件JarFile"><a href="#创建一个JAR文件参考文件JarFile" class="headerlink" title="创建一个JAR文件参考文件JarFile"></a>创建一个JAR文件参考文件JarFile</h3><p>一旦获取Provider JAR文件的URL后，即可创建引用JAR文件的java.util.jar.JarFile。在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#VerifyJFBasics" target="_blank" rel="noopener">验证Provider JAR文件</a>的步骤中需要此实例。</p>
+<p>要创建JAR文件，首先调用它的openConnection方法打开指定URL的连接。由于URL是JAR URL，因此类型为java.net.JarURLConnection。以下是基本代码：</p>
+<pre><code>// 适当的协议初始化URL
+jarURL =
+    url.getProtocol().equalsIgnoreCase(&quot;jar&quot;) ? url :
+        new URL(&quot;jar:&quot; + url.toString() + &quot;!/&quot;);
+
+// 使用JarURLConnection检索jar包
+JarFile jf = (JarFile) AccessController.doPrivileged(
+    new PrivilegedExceptionAction() {
+        public Object run() throws Exception {
+            JarURLConnection conn =
+                (JarURLConnection) jarURL.openConnection();
+    ...  
+</code></pre><p>现在您已经拥有了一个JarURLConnection，您可以调用它的getJarFile方法来获取JAR文件：</p>
+<pre><code>// 总是得到一个新的副本，所以其他一些应用程序关闭缓存的JAR时，我们不必担心过时的文件句柄时。
+conn.setUseCaches(false);
+jf = conn.getJarFile(); 
+</code></pre><h2 id="验证提供程序JAR文件：基础知识"><a href="#验证提供程序JAR文件：基础知识" class="headerlink" title="验证提供程序JAR文件：基础知识"></a>验证提供程序JAR文件：基础知识</h2><p>一旦确定了你的Provider JAR文件的URL并且已经创建了对JAR文件的参考JarFile(如上面的步骤所示)，则可以验证该文件。</p>
+<p>基本方法是：</p>
+<ol>
+<li>确保每个条目的签名者证书中至少有一个与Provider自己的代码签名证书相同。</li>
+<li>浏览JAR文件中的所有条目，并确保每个条目上的签名都能正确验证。</li>
+<li>确保每个条目的签名者证书中至少有一个可以追溯到受信任的证书颁发机构。</li>
+</ol>
+<h3 id="验证设置"><a href="#验证设置" class="headerlink" title="验证设置"></a>验证设置</h3><p>我们的方法是定义一个JarVerifier类来处理从给定URL中检索JAR文件并验证JAR文件是否使用指定证书签名。</p>
+<p>JarVerifier构造函数将Provider URL作为参数，稍后将用于检索JAR文件。</p>
+<p>实际的jar验证是verify方法实现的，该方法将Provider代码签名证书作为参数。</p>
+<pre><code>public void verify(X509Certificate targetCert) throws IOException {
+    // variable &apos;jarFile&apos; is a JarFile object created from the provider&apos;s Jar URL.
+    ...
+    Vector entriesVec = new Vector();
+</code></pre><p>基本上这个verify方法会经过两次JAR文件条目：第一次检查每个条目的签名，第二次验证签名者是可信的。</p>
+<p>注意：在我们的代码片段中，jarFile变量Provider jar文件的JarFile对象。</p>
+<h3 id="JAR文件签名检查"><a href="#JAR文件签名检查" class="headerlink" title="JAR文件签名检查"></a>JAR文件签名检查</h3><p>认证的Provider Jar文件时签过名的。因此，如果JAR文件未被签名，则它已被篡改：</p>
+<pre><code>// Ensure the jar file is signed.
+Manifest man = jarFile.getManifest();
+    if (man == null) {
+    throw new SecurityException(&quot;The provider is not signed&quot;);
+} 
+</code></pre><h2 id="验证签名"><a href="#验证签名" class="headerlink" title="验证签名"></a>验证签名</h2><p>下一步是浏览JAR文件中的所有条目，并确保每个条目上的签名都能正确验证。验证JAR文件条目签名的一种可能方法是简单地读取文件。如果JAR文件已签名，则该read方法自动执行签名验证。以下是示例代码：</p>
+<pre><code>// Ensure all the entries&apos; signatures verify correctly
+byte[] buffer = new byte[8192];
+Enumeration entries = jarFile.entries();
+
+while (entries.hasMoreElements()) {
+    JarEntry je = (JarEntry) entries.nextElement();
+
+    // Skip directories.
+    if (je.isDirectory())
+        continue;
+
+    entriesVec.addElement(je);
+    InputStream is = jarFile.getInputStream(je);
+
+    // Read in each jar entry.
+    // A security exception will be thrown if a signature/digest check fails.
+    int n;
+    while ((n = is.read(buffer, 0, buffer.length)) != -1) {
+        // Don&apos;t care
+    }
+    is.close();
+}
+</code></pre><h2 id="确保签名者受信任"><a href="#确保签名者受信任" class="headerlink" title="确保签名者受信任"></a>确保签名者受信任</h2><p>上一节中的代码验证了所有提供程序JAR文件条目的签名。事实上要求它们全部正确验证，但仅仅验证JAR文件的真实性是不够的。最后的要求是签名由与开发该Provider的实体相同的实体生成。为了测试签名是否可信，我们可以再次检查JAR文件中的每个条目(这次使用上一步中的内置步骤entriesVec)，并且对于每个条目必须签名(即，不包括每个目录条目，不包括META-INF目录中条目)：</p>
+<ul>
+<li>获取条目的签名者证书列表。</li>
+<li>识别每个证书链并确定是否有任何证书链是可信的。至少有一个证书链必须是可信的。</li>
+</ul>
+<p>循环设置如下：</p>
+<pre><code>Enumeration e = entriesVec.elements();
+while (e.hasMoreElements()) {
+    JarEntry je = (JarEntry) e.nextElement();
+    ...
+}
+</code></pre><h3 id="获取证书列表"><a href="#获取证书列表" class="headerlink" title="获取证书列表"></a>获取证书列表</h3><p>JAR文件条目JarEntry的签名者的证书可以简单地通过调用 JarEntry getCertificates方法获得：</p>
+<pre><code>Certificate [] certs = je.getCertificates();
+</code></pre><p>将这一行代码添加到以前的循环设置代码中，并添加代码以忽略目录和META-INF目录中文件，这些代码为我们提供了：</p>
+<pre><code>while (e.hasMoreElements()) {
+    JarEntry je = (JarEntry) e.nextElement();
+
+    // Every file must be signed except files in META-INF.
+    Certificate[] certs = je.getCertificates();
+    if ((certs == null) || (certs.length == 0)) {
+        if (!je.getName().startsWith(&quot;META-INF&quot;))
+            throw new SecurityException(
+                &quot;The provider has unsigned class files.&quot;);
+        } else {
+            // Check whether the file is signed by the expected
+            // signer. The jar may be signed by multiple signers.
+            // See if one of the signers is &apos;targetCert&apos;.
+            ...
+        }
+    ...  
+</code></pre><h3 id="识别每个签名者并确定是否值得信任"><a href="#识别每个签名者并确定是否值得信任" class="headerlink" title="识别每个签名者并确定是否值得信任"></a>识别每个签名者并确定是否值得信任</h3><p>JarEntry的getCertificates方法返回的证书数组包含一个或多个证书链。条目每个签名者有一个链。每个链包含一个或多个证书。链中的每个证书都认证上一个证书中的公钥。</p>
+<p>链中的第一个证书是签名者证书，其中包含与实际用于签名条目的私钥对应的公钥。每个后续证书都是以前证书颁发者的证书。由于自我完整性检查是基于JAR文件是否使用Provider的签名证书进行签名，因此信任决定将仅针对第一个证书即签名者的证书进行。</p>
+<p>我们需要通过一系列证书链并检查每个链和相关的签名者，直到找到可信的实体。对于每个JAR文件条目，至少有一个签​​名者必须是可信的。当且仅当其证书等于嵌入式Provider签名证书时，签署者才被视为“可信”。</p>
+<p>以下示例代码循环遍历所有证书链，将链中的第一个证书与嵌入式Provider签名证书进行比较，并且仅true在找到匹配项时才返回。</p>
+<pre><code>int startIndex = 0;
+X509Certificate[] certChain;
+boolean signedAsExpected = false;
+
+while ((certChain = getAChain(certs, startIndex)) != null) {
+    if (certChain[0].equals(targetCert)) {
+        // Stop since one trusted signer is found.
+        signedAsExpected = true;
+        break;
+    }
+
+    // Proceed to the next chain.
+    startIndex += certChain.length;
+}
+
+if (!signedAsExpected) {
+    throw new SecurityException(
+        &quot;The provider is not signed by a trusted signer&quot;);
+}
+</code></pre><p>getAChain方法定义如下：</p>
+<pre><code>/**
+ * Extracts ONE certificate chain from the specified certificate array
+ * which may contain multiple certificate chains, starting from index
+ * &apos;startIndex&apos;.
+ */
+private static X509Certificate[] getAChain(
+        Certificate[] certs, int startIndex) {
+
+    if (startIndex &gt; certs.length - 1)
+        return null;
+
+    int i;
+    // Keep going until the next certificate is not the
+    // issuer of this certificate.
+    for (i = startIndex; i &lt; certs.length - 1; i++) {
+        if (!((X509Certificate)certs[i + 1]).getSubjectDN().
+                equals(((X509Certificate)certs[i]).getIssuerDN())) {
+            break;
+        }
+    }
+
+    // Construct and return the found certificate chain.
+    int certChainSize = (i-startIndex) + 1;
+    X509Certificate[] ret = new X509Certificate[certChainSize];
+    for (int j = 0; j &lt; certChainSize; j++ ) {
+        ret[j] = (X509Certificate) certs[startIndex + j];
+    }
+    return ret;
+}
+</code></pre><h2 id="关于myJCE示例代码的注释"><a href="#关于myJCE示例代码的注释" class="headerlink" title="关于myJCE示例代码的注释"></a>关于myJCE示例代码的注释</h2><p>示例代码<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/MyJCE.java" target="_blank" rel="noopener">MyJCE.java</a>是一个示例Provider，它具有执行自我完整性检查的selfIntegrityChecking 方法。它首先确定自己的Provider JAR文件的URL，然后验证Provider JAR文件是否使用嵌入式代码签名证书进行签名。</p>
+<p><strong>注意</strong>：该方法selfIntegrityChecking应该由其加密引擎类的所有构造函数调用，以确保其完整性不受影响。</p>
+<p>MyJCE在以下步骤中执行自我完整性检查：</p>
+<ol>
+<li>使用自己的类MyJCE.class，确定访问ProviderJAR文件的URL。</li>
+<li>使用步骤1中Provider URL，实例化JarVerifier对象  。</li>
+<li>从嵌入的bytesOfProviderCert字节数组，创建一个X509Certificate对象。</li>
+<li>调用JarVerifier.verify方法来验证Provider JAR文件中的所有条目均已签名，并使用步骤3中实例化的相同证书进行签名。</li>
+</ol>
+<p><strong>注意</strong>：JarVerifier类将从给定的URL中检索JAR文件，确保JAR文件已签名，所有条目都具有有效签名，并且该条目使用指定的X509Certificate签名。</p>
+<p>调用JarVerifier.verify有几种情况会引发安全异常 ：</p>
+<ul>
+<li>传递给verify的证书为空(无效)。</li>
+<li>无法从给定的URL中检索JAR文件。</li>
+<li>Provider未被签名。(jar包没有mainfest)</li>
+<li>Provider具有未签名的类文件。</li>
+<li>Provider未使用指定的证书进行签名。</li>
+</ul>
+<p><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/MyJCE.java" target="_blank" rel="noopener">MyJCE.java</a>样本代码由如上所示的代码片段组成。此外，它还包括错误处理，示例代码签名证书字节以及用于从嵌入示例代码的签名证书字节实例化X509Certificate对象的代码。</p>
+<p>有关使用AccessController.doPrivileged方法的信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/doprivileged.html" target="_blank" rel="noopener">API For Privileged Blocks</a>了解有关使用doPrivileged的信息。</p>
+<h1 id="更多的实现细节和要求"><a href="#更多的实现细节和要求" class="headerlink" title="更多的实现细节和要求"></a>更多的实现细节和要求</h1><h2 id="别名"><a href="#别名" class="headerlink" title="别名"></a>别名</h2><p>对于许多加密算法和类型，在Java加密体系结构参考指南的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A中</a>定义了一个官方“标准名称” 。</p>
+<p>例如，“MD5”是RSA DSI在RFC 1321中定义的RSA-MD5消息摘要算法的标准名称。DiffieHellman是PKCS3中定义的Diffie-Hellman密钥协议算法的标准。</p>
+<p>在JDK中，有一种别名方案可以使客户端在引用算法或类型时使用别名，而不是标准名称。例如，“SUN” Provider的主类(Sun.java)为标准名称为“SHA1withDSA”的算法定义别名“SHA1/DSA”。因此，以下陈述是等同的：</p>
+<pre><code>Signature sig = Signature.getInstance(&quot;SHA1withDSA&quot;, &quot;SUN&quot;);
+
+Signature sig = Signature.getInstance(&quot;SHA1/DSA&quot;, &quot;SUN&quot;);
+</code></pre><p>别名可以在您的“主类”中定义(请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step3" target="_blank" rel="noopener">步骤3</a>)。要定义别名，请创建一个名为</p>
+<pre><code>Alg.Alias.engineClassName.aliasName
+</code></pre><p>的属性，其中engineClassName是引擎类的名称(例如，Signature)，并且aliasName是您的别名。该属性的值必须是起别名的算法(或类型)的标准算法(或类型)名称。</p>
+<p>例如，“SUN” Provider通过以下将Alg.Alias.Signature.SHA1/DSA的属性设置为SHA1withDSA的方式为标准名称为“SHA1withDSA”的签名算法定义别名“SHA1/DSA” ：</p>
+<pre><code>put(&quot;Alg.Alias.Signature.SHA1/DSA&quot;, &quot;SHA1withDSA&quot;);
+</code></pre><p>请注意，由一个Provider定义的别名仅适用于该Provider，而不适用于其他Provider。因此，SunJCE Provider定义的别名仅供SunJCE Provider使用。</p>
+<h2 id="服务依赖性"><a href="#服务依赖性" class="headerlink" title="服务依赖性"></a>服务依赖性</h2><p>一些算法需要使用其他类型的算法。例如，PBE算法通常需要使用消息摘要算法才能将密码转换为密钥。</p>
+<p>如果您正在实现一种需要另一种算法的算法，则可以执行以下操作之一：</p>
+<ol>
+<li>为两者提供您自己的实现。</li>
+<li><p>让您的一个算法的实现使用其他类型算法的实例，由每个Java SE平台安装附带的默认Sun Provider提供。例如，如果要实现需要消息摘要算法的PBE算法，则可以通过调用实现SHA256消息摘要算法的类的实例</p>
+<pre><code>MessageDigest.getInstance(&quot;SHA256&quot;, &quot;SUN&quot;)
+</code></pre></li>
+<li><p>让您的一个算法的实现使用其他类型算法的实例，由另一个特定Provider提供。这只适用于您确定所有使用您的Provider的客户也将安装其他Provider。</p>
+</li>
+<li><p>让您的一个算法的实现使用其他类型算法的实例，由另一个(未指定)Provider提供。也就是说，您可以按名称请求算法，但不需要指定任何特定的Provider，如</p>
+<pre><code>MessageDigest.getInstance(&quot;SHA256&quot;)
+</code></pre><p> 如果您确信将在每个将使用Provider的Java平台上安装所请求算法(在本例中为SHA256)的至少一个实现，那么这是恰当的。</p>
+</li>
+</ol>
+<p>以下是一些算法相互依赖的常见类型：</p>
+<h3 id="签名和消息摘要算法"><a href="#签名和消息摘要算法" class="headerlink" title="签名和消息摘要算法"></a>签名和消息摘要算法</h3><p>签名算法通常需要使用消息摘要算法。例如，SHA256withDSA签名算法需要SHA256消息摘要算法。</p>
+<h3 id="签名和-伪-随机数生成算法"><a href="#签名和-伪-随机数生成算法" class="headerlink" title="签名和(伪)随机数生成算法"></a>签名和(伪)随机数生成算法</h3><p>签名算法通常需要使用(伪)随机数生成算法。例如，为了生成DSA签名需要这样的算法。</p>
+<h3 id="密钥对生成和消息摘要算法"><a href="#密钥对生成和消息摘要算法" class="headerlink" title="密钥对生成和消息摘要算法"></a>密钥对生成和消息摘要算法</h3><p>密钥对生成算法通常需要使用消息摘要算法。例如，使用SHA-256消息摘要算法生成DSA密钥。</p>
+<h3 id="算法参数生成和消息摘要算法"><a href="#算法参数生成和消息摘要算法" class="headerlink" title="算法参数生成和消息摘要算法"></a>算法参数生成和消息摘要算法</h3><p>算法参数生成器通常需要使用消息摘要算法。例如，使用SHA-256消息摘要算法生成DSA参数。</p>
+<h3 id="密钥库和消息摘要算法"><a href="#密钥库和消息摘要算法" class="headerlink" title="密钥库和消息摘要算法"></a>密钥库和消息摘要算法</h3><p>密钥库实现通常会利用消息摘要算法来计算密钥散列(其中key是用户提供的密码)，以检查密钥库的完整性并确保密钥库未被篡改。</p>
+<h3 id="密钥对生成算法和算法参数生成器"><a href="#密钥对生成算法和算法参数生成器" class="headerlink" title="密钥对生成算法和算法参数生成器"></a>密钥对生成算法和算法参数生成器</h3><p>密钥对生成算法有时需要生成一组新的算法参数。它可以直接生成参数，也可以使用算法参数生成器。</p>
+<h3 id="密钥对生成，算法参数生成和-伪-随机数生成算法"><a href="#密钥对生成，算法参数生成和-伪-随机数生成算法" class="headerlink" title="密钥对生成，算法参数生成和(伪)随机数生成算法"></a>密钥对生成，算法参数生成和(伪)随机数生成算法</h3><p>密钥对生成算法可能需要一个随机源，以便生成一个新的密钥对，并可能需要一组与密钥相关的新参数。该随机性源由一个SecureRandom对象表示。密钥对生成算法的实现可以自己生成密钥参数，或者可以使用算法参数生成器来生成它们，在这种情况下，它可以或不可以用随机源初始化算法参数生成器。</p>
+<h3 id="算法参数生成器和算法参数"><a href="#算法参数生成器和算法参数" class="headerlink" title="算法参数生成器和算法参数"></a>算法参数生成器和算法参数</h3><p>算法参数生成器的engineGenerateParameters方法必须返回一个AlgorithmParameters实例。</p>
+<h3 id="签名和密钥对生成算法或密钥工厂"><a href="#签名和密钥对生成算法或密钥工厂" class="headerlink" title="签名和密钥对生成算法或密钥工厂"></a>签名和密钥对生成算法或密钥工厂</h3><p>如果您正在实现签名算法，那么您的实现engineInitSign和engineInitVerify方法将需要对底层算法有效的传入密钥(例如，DSS算法的DSA密钥)。您可以执行以下任一操作：</p>
+<ul>
+<li>创建自己的类实现适当接口(例如，实现java.security.interfaces包中DSAPrivateKey和DSAPublicKey接口的类)，并创建自己的密钥对生成器和/或返回这些类型的键的工厂。传入engineInitSign和engineInitVerify的密钥需要是您已实现密钥的类型，即从你的密钥对生成器或密钥工厂生成的密钥。或者你可以，</li>
+<li>接受来自其他密钥对生成器或其他密钥工厂的密钥，只要它们是使您的签名实现能够获得所需信息(例如私钥和公钥以及密钥参数)的适当接口的实例即可。例如，DSS Signature类的engineInitSign方法可以接受任何作为java.security.interfaces.DSAPrivateKey实例的私钥 。</li>
+</ul>
+<h3 id="密钥库和密钥和证书工厂"><a href="#密钥库和密钥和证书工厂" class="headerlink" title="密钥库和密钥和证书工厂"></a>密钥库和密钥和证书工厂</h3><p>密钥库实现通常会使用密钥工厂来解析存储在密钥库中的密钥，并使用证书工厂来解析存储在密钥库中的证书。</p>
+<h2 id="默认初始化"><a href="#默认初始化" class="headerlink" title="默认初始化"></a>默认初始化</h2><p>如果客户端没有明确地初始化密钥对生成器或算法参数生成器，则这种服务的每个Provider都必须提供(并记录)默认初始化。例如，Sun Provider使用1024位的默认模大小(强度)来生成DSA参数，“SunJCE” Provider使用1024位的默认模大小(密钥大小)来生成Diffie-Hellman参数。</p>
+<h2 id="默认密钥对生成器参数要求"><a href="#默认密钥对生成器参数要求" class="headerlink" title="默认密钥对生成器参数要求"></a>默认密钥对生成器参数要求</h2><p>如果您实现密钥对生成器，则您的实现应提供在客户端未指定参数时使用的默认参数。您提供的文档(<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step11" target="_blank" rel="noopener">步骤11</a>)应该说明默认参数。</p>
+<p>例如，在Sun Provider中DSA密钥对生成器为512，768，和1024位密钥对的生成提供一组预先计算的p，q和g默认值：</p>
+<pre><code>p = fd7f5381 1d751229 52df4a9c 2eece4e7 f611b752 3cef4400 c31e3f80
+    b6512669 455d4022 51fb593d 8d58fabf c5f5ba30 f6cb9b55 6cd7813b
+    801d346f f26660b7 6b9950a5 a49f9fe8 047b1022 c24fbba9 d7feb7c6
+    1bf83b57 e7c6a8a6 150f04fb 83f6d3c5 1ec30235 54135a16 9132f675
+    f3ae2b61 d72aeff2 2203199d d14801c7
+
+q = 9760508f 15230bcc b292b982 a2eb840b f0581cf5
+
+g = f7e1a085 d69b3dde cbbcab5c 36b857b9 7994afbb fa3aea82 f9574c0b
+    3d078267 5159578e bad4594f e6710710 8180b449 167123e8 4c281613
+    b7cf0932 8cc8a6e1 3c167a8b 547c8d28 e0a3ae1e 2bb3a675 916ea37f
+    0bfa2135 62f1fb62 7a01243b cca4f1be a8519089 a883dfe1 5ae59f06
+    928b665e 807b5525 64014c3b fecf492a
+</code></pre><p>(这里给定的p和q值由所述原代标准生成，使用160位的</p>
+<pre><code>SEED：8d515589 4229d5e6 89ee01e6 018a237e 2cae64cd
+</code></pre><p>有了这个种子，当时计数器是92时，算法找到了p，q.)</p>
+<h2 id="Provider-Service类"><a href="#Provider-Service类" class="headerlink" title="Provider.Service类"></a>Provider.Service类</h2><p>通过介绍，安全Provider通过放入Hashtable条目中适当格式化的键值字符串对发布其服务信息。虽然这种机制简单方便，但它限制了可能的定制化数量。因此，JDK 5.0引入了第二个选项——Provider.Service类。它为Provider公布其服务并支持下述其他功能提供了一种替代方法。请注意，此方式与使用字符串值哈希表项的旧方法完全兼容。JDK 5.0的Provider可以根据喜好选择任意一种方法，甚至可以同时使用两种方法。</p>
+<p>Provider.Service对象封装了关于服务的所有信息。这是提供服务的Provider，其类型(例如MessageDigest或Signature)，算法名称以及实现该服务的类的名称。或者，它还包含此服务(别名)和属性的替代算法名称列表，这些名称是(名称，值)字符串对的映射。另外，它定义了newInstance()和supportsParameter()方法。它们有默认的实现，但是如果需要的话可以被Provider覆盖，这可能与硬件安全令牌接口的Provider的情况相同。</p>
+<p>安全框架在需要构建新的实现实例时使用newInstance()方法。默认实现使用反射来为相应类型的服务调用标准构造函数。除了CertStore外所有标准服务，这是无参数构造函数。在这种情况下，newInstance()的constructorParameter必须空。对于CertStore类型的服务，调用接受CertStoreParameters对象的构造函数，并且constructorParameter必须是非空CertStoreParameters实例。安全Provider可以重写newInstance()方法来实现适合于该实现的实例化。它可以使用直接调用或调用构造函数来传递特定于Provider实例或令牌的附加信息。例如，如果系统上存在多个智能卡读卡器，它可能会传递关于新创建的服务与哪个读卡器关联的信息。但是，尽管定制，所有的实现都必须遵循上述关于constructorParameter的约定 。</p>
+<p>supportsParameter()测试服务是否可以使用指定的参数。如果此服务不能使用该参数，它将返回false。如果此服务可以使用该参数，如果快速测试不可行，或者状态未知，则返回true。安全框架使用它与某些类型的服务快速排除不匹配的实现。目前仅定义适用于以下标准服务：Signature，Cipher，Mac和KeyAgreement。在这些情况下，parameter必须是Key的一个实例。例如，对于Signature服务，框架在实例化服务之前测试服务是否可以使用提供的Key。默认实现检查如下所述SupportedKeyFormats和SupportedKeyClasses属性。同样，Provider可以重写这个方法来实现额外的测试。</p>
+<p>SupportedKeyFormats属性是编码密钥支持格式的列表(由key.getFormat()返回 )由“|”(管道)字符分隔 。例如，X.509|PKCS#8。SupportedKeyClasses属性是接口类的名称列表,由“|”字符分隔。如果它可以分配给至少一个这样的类或接口,则密钥对象被认为是可以接受的。换句话说，如果密钥对象的类是列出的类之一(或类本身)的子类，或者它实现了列出的接口。一个示例值是 “java.security.interfaces.RSAPrivateKey|java.security.interfaces.RSAPublicKey” 。</p>
+<p>Provider提供了四种方法来添加和查找服务。如前所述，这些方法以及现有属性方法的实现已经过专门设计，以确保与现有Provider子类的兼容性。这是通过以下方式实现的：</p>
+<p>如果使用遗留的Properties方法添加条目，则Provider类会确保在通过getService()查找将属性字符串解析为等效的Service对象 。同样，如果使用putService()方法，则等价属性字符串会同时置于Provider<br>的散列表中。如果Provider实现覆盖Provider类中的任何方法，则必须确保其实现不会干扰此转换。为了避免问题，我们建议实现不要覆盖Provider类中的任何方法。</p>
+<h2 id="签名格式"><a href="#签名格式" class="headerlink" title="签名格式"></a>签名格式</h2><p>如果您实现了签名算法，则您提供的文档(步骤11)应指定签名(由sign方法生成)的编码格式。</p>
+<p>例如，由Sun Provider提供的SHA256withDSA签名算法将该签名编码为具有两个ASN.1 INTEGER值(r、s)的标准ASN.1序列，并按以下顺序：</p>
+<pre><code>SEQUENCE :: = {
+        r INTEGER，
+        s INTEGER}
+</code></pre><h2 id="DSA接口及其必需的实现"><a href="#DSA接口及其必需的实现" class="headerlink" title="DSA接口及其必需的实现"></a>DSA接口及其必需的实现</h2><p>为了方便实现DSA服务的程序员，Java安全API包含以下接口(在java.security.interfaces 包中)：</p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAKey.html" target="_blank" rel="noopener">DSAKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAKeyPairGenerator.html" target="_blank" rel="noopener">DSAKeyPairGenerator</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAParams.html" target="_blank" rel="noopener">DSAParams</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAPrivateKey.html" target="_blank" rel="noopener">DSAPrivateKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAPublicKey.html" target="_blank" rel="noopener">DSAPublicKey</a></li>
+</ul>
+<p>以下各节讨论这些接口的实现要求。</p>
+<h3 id="DSAKeyPairGenerator"><a href="#DSAKeyPairGenerator" class="headerlink" title="DSAKeyPairGenerator"></a>DSAKeyPairGenerator</h3><p>DSAKeyPairGenerator接口已过时。它需要用于使客户机提供DSA特定参数来使用，而不是实现提供的默认参数。但是，在Java中不再需要; 新的KeyPairGenerator initialize方法采用AlgorithmParameterSpec参数，使客户端能够使用特定于算法的参数。</p>
+<h3 id="DSAParams实现"><a href="#DSAParams实现" class="headerlink" title="DSAParams实现"></a>DSAParams实现</h3><p>如果您正在实现DSA密钥对生成器，你需要一个实现<a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAParams.html" target="_blank" rel="noopener">DSAParams</a>的类用于保持和返回p，q和g参数。</p>
+<p>如果你实现DSAPrivateKey和DSAPublicKey接口，同样需要一个DSAParams实现。DSAPublicKey和DSAPrivateKey都继承了DSAKey接口，它包含一个必须返回DSAParams对象的getParams方法。有关更多信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#DSAPrivAndPubKeys" target="_blank" rel="noopener">DSAPrivateKey和DSAPublicKey实现</a>。</p>
+<p>注意：JDK中内置了一个DSAParams实现：java.security.spec.DSAParameterSpec类。</p>
+<h3 id="DSAPrivateKey-和-DSAPublicKey实现"><a href="#DSAPrivateKey-和-DSAPublicKey实现" class="headerlink" title="DSAPrivateKey 和 DSAPublicKey实现"></a>DSAPrivateKey 和 DSAPublicKey实现</h3><p>如果您实现DSA密钥对生成器或密钥工厂，则需要创建实现<a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAPrivateKey.html" target="_blank" rel="noopener">DSAPrivateKey</a>和<a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/DSAPublicKey.html" target="_blank" rel="noopener">DSAPublicKey</a>接口的类。</p>
+<p>如果你实现了一个DSA密钥对生成器，你的generateKeyPair方法(在你的KeyPairGeneratorSpi子类中)将返回你实现这些接口的实例。</p>
+<p>如果您实现了DSA密钥工厂，那么您的engineGeneratePrivate方法(在您的 KeyFactorySpi子类中)将返回DSAPrivateKey实现的实例，并且您的engineGeneratePublic方法将返回DSAPublicKey实现的实例。</p>
+<p>另外，你的engineGetKeySpec和engineTranslateKey方法会期望传入的密钥是DSAPrivateKey实现或者DSAPublicKey实现的一个实例。接口实现提供的getParams方法对于从密钥中获取和提取参数然后使用这些参数非常有用，例如调用作为参数的DSAParameterSpec构造函数， 从参数值产生用以DSA初始化KeyPairGenerator对象的密钥规范。</p>
+<p>如果你实现了一个DSA签名算法，DSAPrivateKey将会被传递给你的engineInitSign方法(在你的SignatureSpi子类中)，DSAPublicKey将会被传递给你的engineInitVerify方法。</p>
+<p>请注意：DSAPublicKey和DSAPrivateKey接口分别为DSA公钥和私钥定义了非常通用的，与Provider无关的接口。如果实际传入的密钥是他们的Provider自己实现的实例DSAPrivateKey或者DSAPublicKey，engineGetKeySpec和engineTranslateKey方法(在你的KeyFactorySpi子类)可额外检查，例如，采取的具体Provider的实现细节的优势。DSA签名算法engineInitSign和engineInitVerify方法(在你的 SignatureSpi子类中)也是如此。</p>
+<p>查看实现DSAPublicKey和DSAPrivateKey接口的类需要实现什么样的方法，首先注意下面的接口签名：</p>
+<p>java.security.interfaces包中：</p>
+<pre><code>public interface DSAPrivateKey extends DSAKey, java.security.PrivateKey
+
+public interface DSAPublicKey extends DSAKey, java.security.PublicKey
+
+public interface DSAKey
+</code></pre><p>java.security包中： </p>
+<pre><code>public interface PrivateKey extends Key
+
+public interface PublicKey extends Key
+
+public interface Key extends java.io.Serializable 
+</code></pre><p>为了实现DSAPrivateKey和DSAPublicKey接口，您必须实现它们定义的方法以及它们直接或间接继承的接口所定义的方法。</p>
+<p>因此，对于私钥，您需要提供一个类来实现：</p>
+<ul>
+<li>DSAPrivateKey接口的getX方法。</li>
+<li>java.security.interfaces.DSAKey接口的getParams方法，由于DSAPrivateKey继承DSAKey。注意：该getParams方法返回一个DSAParams对象，所以你还必须有一个<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#DSAParams" target="_blank" rel="noopener">DSAParams实现</a>。</li>
+<li>java.security.Key接口中getAlgorithm，getEncoded以及getFormat方法，由于DSAPrivateKey继承java.security.PrivateKey，PrivateKey继承Key。</li>
+</ul>
+<p>同样，对于公共DSA密钥，您需要提供一个类来实现：</p>
+<ul>
+<li>DSAPublicKey接口的getY方法。</li>
+<li>java.security.interfaces.DSAKey接口的getParams方法，由于DSAPublicKey继承DSAKey。注意：该getParams方法返回一个DSAParams对象，所以你还必须有一个<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#DSAParams" target="_blank" rel="noopener">DSAParams实现</a>。</li>
+<li>java.security.Key接口中getAlgorithm，getEncoded以及getFormat方法，由于DSAPrivateKey继承java.securityPublicKey，PublicKey继承Key。</li>
+</ul>
+<h2 id="RSA接口及其必需的实现"><a href="#RSA接口及其必需的实现" class="headerlink" title="RSA接口及其必需的实现"></a>RSA接口及其必需的实现</h2><p>为了方便程序员实现RSA服务，Java安全API包含以下接口(在java.security.interfaces包中)：</p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/RSAPrivateKey.html" target="_blank" rel="noopener">RSAPrivateKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/RSAPrivateCrtKey.html" target="_blank" rel="noopener">RSAPrivateCrtKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/security/interfaces/RSAPublicKey.html" target="_blank" rel="noopener">RSAPublicKey</a></li>
+</ul>
+<p>以下各节讨论这些接口的实现要求。</p>
+<h3 id="RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现"><a href="#RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现" class="headerlink" title="RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现"></a>RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现</h3><p>如果您实现RSA密钥对生成器或密钥工厂，则需要创建实现RSAPrivateKey(和/或 RSAPrivateCrtKey)和 RSAPublicKey接口的类。(RSAPrivateCrtKey是使用中国剩余定理(CRT)表示的RSA私钥的接口。)</p>
+<p>如果你实现了一个RSA密钥对生成器，你的generateKeyPair方法(在你的KeyPairGeneratorSpi子类中)将返回你实现这些接口的实例。</p>
+<p>如果您实现了RSA密钥工厂，那么你的engineGeneratePrivate方法(在你的KeyFactorySpi子类中)将返回你的RSAPrivateKey(或RSAPrivateCrtKey)实现的实例，并且你的engineGeneratePublic方法将返回RSAPublicKey实现的实例。</p>
+<p>此外，engineGetKeySpec和engineTranslateKey方法期望传入的密钥是一个RSAPrivateKey，RSAPrivateCrtKey或RSAPublicKey实现的实例。</p>
+<p>如果你实现了一个RSA签名算法，你的engineInitSign方法(在你的SignatureSpi子类中)将会传递一个RSAPrivateKey或一个RSAPrivateCrtKey，并且你的engineInitVerify方法将会被传递一个RSAPublicKey。</p>
+<p>请注意：RSAPublicKey，RSAPrivateKey，和RSAPrivateCrtKey接口为RSA公钥和私钥定义一个非常通用的、Provider无关的接口。engineGetKeySpec和engineTranslateKey方法(在你的KeyFactorySpi子类)可额外检查，如果传入的密钥实际上是Provider自己实现的RSAPrivateKey，RSAPrivateCrtKey或者RSAPublicKey实例，例如，采取的具体Provider的实现细节的优势。RSA签名算法engineInitSign和engineInitVerify方法(在你的SignatureSpi子类中)也是如此。</p>
+<p>查看实现RSAPublicKey，RSAPrivateKey以及RSAPrivateCrtKey接口的类需要实现什么样的方法，首先注意下面的接口签名：</p>
+<p>在java.security.interfaces包中：</p>
+<pre><code>public interface RSAPrivateKey extends java.security.PrivateKey
+
+public interface RSAPrivateCrtKey extends RSAPrivateKey
+
+public interface RSAPublicKey extends java.security.PublicKey
+</code></pre><p>在java.security包中：</p>
+<pre><code>public interface PrivateKey extends Key
+
+public interface PublicKey extends Key
+
+public interface Key extends java.io.Serializable
+</code></pre><p>为了实现RSAPrivateKey， RSAPrivateCrtKey和RSAPublicKey接口，您必须实现它们定义的方法以及它们直接或间接继承的接口所定义的方法。</p>
+<p>因此，对于RSA私钥，您需要提供一个类来实现：</p>
+<ul>
+<li>RSAPrivateKey接口中的getModulus和getPrivateExponent方法。</li>
+<li>java.security.Key接口中的getAlgorithm，getEncoded以及getFormat方法，由于RSAPrivateKey继承java.security.PrivateKey，PrivateKey继承Key。</li>
+</ul>
+<p>同样，对于使用中国剩余定理(CRT)表示的RSA私钥，您需要提供一个类来实现：</p>
+<ul>
+<li>所有上面列出的RSA私钥的方法，因为RSAPrivateCrtKey继承了java.security.interfaces.RSAPrivateKey。</li>
+<li>RSAPrivateKey接口的getPublicExponent，getPrimeP，getPrimeQ，getPrimeExponentP，getPrimeExponentQ，和getCrtCoefficient方法 。</li>
+</ul>
+<p>对于RSA公钥，您需要提供一个类来实现：</p>
+<ul>
+<li>RSAPublicKey接口的getModulus和getPublicExponent方法。</li>
+<li>java.security.Key接口中的getAlgorithm，getEncoded以及getFormat方法，由于RSAPublicKey继承java.security.PublicKey，PublicKey继承Key。</li>
+</ul>
+<p>JCA包含许多用于最常用的密码和密钥协议算法参数的AlgorithmParameterSpec实现。如果您使用的算法参数应该用于JCA未提供的另一种算法类型，则需要提供适用于该类算法的自己的AlgorithmParameterSpec实现。</p>
+<h2 id="Diffie-Hellman接口及其必需的实现"><a href="#Diffie-Hellman接口及其必需的实现" class="headerlink" title="Diffie-Hellman接口及其必需的实现"></a>Diffie-Hellman接口及其必需的实现</h2><p>为了方便程序员实现Diffie-Hellman服务，JCA包含以下接口(在javax.crypto.interfaces包中)：</p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/DHKey.html" target="_blank" rel="noopener">DHKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/DHPrivateKey.html" target="_blank" rel="noopener">DHPrivateKey</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/DHPublicKey.html" target="_blank" rel="noopener">DHPublicKey</a></li>
+</ul>
+<p>以下各节讨论这些接口的实现要求。</p>
+<h3 id="DHPrivateKey和DHPublicKey实现"><a href="#DHPrivateKey和DHPublicKey实现" class="headerlink" title="DHPrivateKey和DHPublicKey实现"></a>DHPrivateKey和DHPublicKey实现</h3><p>如果你实现了一个Diffie-Hellman密钥对生成器或密钥工厂，则需要创建实现<a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/DHPrivateKey.html" target="_blank" rel="noopener">DHPrivateKey</a>和<a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/interfaces/DHPublicKey.html" target="_blank" rel="noopener">DHPublicKey</a>接口的类 。</p>
+<p>如果你实现了一个Diffie-Hellman密钥对生成器，你的generateKeyPair方法(在你的KeyPairGeneratorSpi子类中)将会返回你实现这些接口的实例。</p>
+<p>如果你实现了一个Diffie-Hellman密钥工厂，那么您的engineGeneratePrivate方法(在您的KeyFactorySpi子类中)将返回实现DHPrivateKey的实例，并且您的engineGeneratePublic方法将返回实现DHPublicKey的实例。</p>
+<p>另外，你engineGetKeySpec和engineTranslateKey方法期望传入的密钥是一个DHPrivateKey或者DHPublicKey实现的一个实例。接口实现提供的getParams方法对于从密钥中获取和提取参数很有用。然后，您可以使用这些参数作为调用DHParameterSpec构造函数的参数，用于KeyPairGenerator为Diffie-Hellman初始化对象的参数值创建参数规范。</p>
+<p>如果你实现了Diffie-Hellman密钥协议算法，你的engineInit方法(在你的 KeyAgreementSpi子类中)期望传入DHPrivateKey，你的engineDoPhase方法传入DHPublicKey。</p>
+<p>注：DHPublicKey和DHPrivateKey接口分别为Diffie-Hellman公钥和私钥定义了一个非常通用的、独立于Provider的接口。engineGetKeySpec和engineTranslateKey方法(在你的 KeyFactorySpi子类)可额外检查，如果传入的密钥实际上是他们的Provider自己实现的DHPrivateKey或者 DHPublicKey实例，例如，采取的具体Provider的实现细节的优势。Diffie-Hellman算法engineInit和engineDoPhase方法(在你的KeyAgreementSpi子类中)也是如此。</p>
+<p>查看实现DHPublicKey和DHPrivateKey接口的类需要实现什么样的方法，首先注意下面的接口签名：</p>
+<p>在javax.crypto.interfaces包中：</p>
+<pre><code>public interface DHPrivateKey extends DHKey, java.security.PrivateKey
+
+public interface DHPublicKey extends DHKey, java.security.PublicKey
+
+public interface DHKey 
+</code></pre><p>在java.security包中：</p>
+<pre><code>public interface PrivateKey extends Key
+
+public interface PublicKey extends Key
+
+public interface Key extends java.io.Serializable 
+</code></pre><p>要实现DHPrivateKey和DHPublicKey接口，您必须实现它们定义的方法以及它们直接或间接继承的接口所定义的方法。</p>
+<p>因此，对于私钥，您需要提供一个类来实现：</p>
+<ul>
+<li>DHPrivateKey接口的getX方法。</li>
+<li>javax.crypto.interfaces.DHKey接口的getParams方法，因为DHPrivateKey继承DHKey。</li>
+<li>java.security.Key接口中的getAlgorithm，getEncoded以及 getFormat方法，由于DHPrivateKey继承java.security.PrivateKey，PrivateKey继承Key。</li>
+</ul>
+<p>同样，对于Diffie-Hellman公钥，您需要提供一个类来实现：</p>
+<ul>
+<li>DHPublicKey接口的getY方法。</li>
+<li>javax.crypto.interfaces.DHKey接口的getParams方法，因为DHPublicKey继承DHKey。</li>
+<li>java.security.Key接口中的getAlgorithm，getEncoded以及getFormat方法，由于DHPublicKey继承java.security.PublicKey，PublicKey继承Key。</li>
+</ul>
+<h2 id="其他算法类型的接口"><a href="#其他算法类型的接口" class="headerlink" title="其他算法类型的接口"></a>其他算法类型的接口</h2><p>如上所述，Java安全API包含接口，以方便程序员实现DSA，RSA和ECC等服务。如果有没有API支持的服务，你需要定义你自己的API。</p>
+<p>如果要为不同的算法实现密钥对生成器，则应该创建包含一个或多个客户端可以调用的initialize方法的接口，以便使用提供的算法特定参数，而不是实现提供的默认参数。你的KeyPairGeneratorSpi子类应该实现这个接口。</p>
+<p>对于没有直接API支持的算法，建议您创建类似的接口并提供实现类。你的公共密钥接口应该继承PublicKey接口。同样，你的私钥接口应该继承PrivateKey接口。</p>
+<h2 id="算法参数规范接口和类"><a href="#算法参数规范接口和类" class="headerlink" title="算法参数规范接口和类"></a>算法参数规范接口和类</h2><p>算法参数规范是与算法一起使用的参数集的透明表示。</p>
+<p>透明的参数表示意味着可以单独访问每个值，通过的一个在相应的规范类中定义的get方法(例如，DSAParameterSpec定义getP，getQ和getG方法，分别地访问该p，q和g参数)。</p>
+<p>这与AlgorithmParameters引擎类提供的不透明表示形式形成了对比，在这种表示形式中，您无法直接访问密钥材料值; 你只能得到与参数集相关的算法的名称(通过getAlgorithm)和某种编码(通过getEncoded)。</p>
+<p>如果你提供了一个AlgorithmParametersSpi，AlgorithmParameterGeneratorSpi或者KeyPairGeneratorSpi实现，你必须使用这个AlgorithmParameterSpec接口，因为每个类都包含带AlgorithmParameterSpec参数的方法 。这些方法需要确定实际传入哪个接口的实现，并相应地采取行动。</p>
+<p>JCA包含许多AlgorithmParameterSpec实现，最常用于签名，密码和密钥协议算法参数。如果您使用JCA未提供的另一种算法类型的算法参数，则需要提供适用于该类算法的自己的AlgorithmParameterSpec实现。</p>
+<p>Java在java.security.spec和javax.crypto.spec包中定义了以下算法参数规范接口和类：</p>
+<h3 id="AlgorithmParameterSpec接口"><a href="#AlgorithmParameterSpec接口" class="headerlink" title="AlgorithmParameterSpec接口"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/AlgorithmParameterSpec.html" target="_blank" rel="noopener">AlgorithmParameterSpec</a>接口</h3><p>AlgorithmParameterSpec是密码参数透明规范的接口。</p>
+<p>该接口不包含方法或常量。它的唯一目的是为所有参数规格进行分组(并提供类型安全性)。所有参数规格都必须实现此接口。</p>
+<h3 id="DSAParameterSpec类"><a href="#DSAParameterSpec类" class="headerlink" title="DSAParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/DSAParameterSpec.html" target="_blank" rel="noopener">DSAParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec和DSAParams接口)指定DSA算法使用的一组参数。它有以下方法：</p>
+<pre><code>public BigInteger getP()
+
+public BigInteger getQ()
+
+public BigInteger getG()
+</code></pre><p>这些方法返回DSA算法参数：素数 p，次素数q和基数g。</p>
+<p>许多类型的DSA服务都会发现这个类很有用——例如，用于DSA签名，密钥对生成器，算法参数生成器和Sun Provider实现的算法参数类。具体的例子，算法参数实现必须包含getParameterSpec方法的实现，该方法返回一个AlgorithmParameterSpec。Sun提供的DSA算法参数实现返回DSAParameterSpec类的实例 。</p>
+<h3 id="IvParameterSpec类"><a href="#IvParameterSpec类" class="headerlink" title="IvParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/IvParameterSpec.html" target="_blank" rel="noopener">IvParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec接口)指定了在反馈模式下与密码一起使用的初始化向量(IV)。</p>
+<ul>
+<li>byte[] getIV()：返回初始化向量(IV)。</li>
+</ul>
+<h3 id="OAEPParameterSpec类"><a href="#OAEPParameterSpec类" class="headerlink" title="OAEPParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/OAEPParameterSpec.html" target="_blank" rel="noopener">OAEPParameterSpec</a>类</h3><p>该类指定了与PKCS＃1标准中定义的OAEP填充一起使用的一组参数。</p>
+<ul>
+<li>String getDigestAlgorithm()：返回消息摘要算法名称。</li>
+<li>String getMGFAlgorithm()：返回掩码生成函数算法名称。</li>
+<li>AlgorithmParameterSpec getMGFParameters()：返回掩生成函数的参数。</li>
+<li>PSource getPSource()：返回编码输入P的源.</li>
+</ul>
+<h3 id="PBEParameterSpec类"><a href="#PBEParameterSpec类" class="headerlink" title="PBEParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/PBEParameterSpec.html" target="_blank" rel="noopener">PBEParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec接口)指定与基于密码的加密(PBE)算法一起使用的一组参数。</p>
+<ul>
+<li>int getIterationCount()：返回迭代计数。</li>
+<li>byte[] getSalt()：返回盐。</li>
+</ul>
+<h3 id="RC2ParameterSpec类"><a href="#RC2ParameterSpec类" class="headerlink" title="RC2ParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/RC2ParameterSpec.html" target="_blank" rel="noopener">RC2ParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec接口)指定与RC2算法一起使用的一组参数。</p>
+<ul>
+<li>boolean equals(Object obj)：测试指定对象和此对象之间的相等性。</li>
+<li>int getEffectiveKeyBits()：以位为单位返回有效密钥大小。</li>
+<li>byte[] getIV()：返回IV，如果此参数集不包含IV则null。</li>
+<li>int hashCode()：计算该对象的哈希码值。</li>
+</ul>
+<h3 id="RC5ParameterSpec类"><a href="#RC5ParameterSpec类" class="headerlink" title="RC5ParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/RC5ParameterSpec.html" target="_blank" rel="noopener">RC5ParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec接口)指定了RC5算法使用的一组参数。</p>
+<ul>
+<li>boolean equals(Object obj)：测试指定对象和此对象之间的相等性。</li>
+<li>byte[] getIV()：返回IV，如果此参数集不包含IV则null。</li>
+<li>int getRounds()：返回轮询次数。</li>
+<li>int getVersion()：返回版本。</li>
+<li>int getWordSize()：以位为单位返回字大小。</li>
+<li>int hashCode()：计算该对象的哈希码值。</li>
+</ul>
+<h3 id="DHParameterSpec类"><a href="#DHParameterSpec类" class="headerlink" title="DHParameterSpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/DHParameterSpec.html" target="_blank" rel="noopener">DHParameterSpec</a>类</h3><p>该类(实现AlgorithmParameterSpec接口)指定与Diffie-Hellman算法一起使用的一组参数。</p>
+<ul>
+<li>BigInteger getG()：返回基本生成器g。</li>
+<li>int getL()：返回l随机指数(私有值)的大小(以位为单位)。</li>
+<li>BigInteger getP()：返回质数模数p。</li>
+</ul>
+<p>许多类型的Diffie-Hellman服务将会发现这个类有用; 例如，用于Diffie-Hellman密钥协议，密钥对生成器，算法参数生成器以及由“SunJCE” Provider实现的算法参数类。具体的例子，算法参数实现必须包含getParameterSpec方法的实现，该方法返回一个AlgorithmParameterSpec。“SunJCE”提供的Diffie-Hellman算法参数实现返回DHParameterSpec类的一个实例。</p>
+<h2 id="密钥工厂所需的密钥规范接口和类"><a href="#密钥工厂所需的密钥规范接口和类" class="headerlink" title="密钥工厂所需的密钥规范接口和类"></a>密钥工厂所需的密钥规范接口和类</h2><p>密钥工厂提供不透明密钥(Key类型)和密钥规范之间的双向转换。如果您实现密钥工厂，则需要了解和利用密钥规范。在某些情况下，您还需要实现自己的密钥规范。</p>
+<p>下面提供了更多关于密钥规范、Java中提供的接口和类以及密钥工厂要求相应规范的的信息。</p>
+<p>密钥规格是构成密钥的密钥材料的透明表示。如果密钥存储在硬件设备上，其规范可能包含有助于识别设备密钥的信息。</p>
+<p>密钥的透明表示意味着您可以通过相应规范类中定义的某个get方法单独访问每个密钥材料值。例如，java.security.spec.DSAPrivateKeySpec定义 getX，getP，getQ，和 getG方法，来访问私钥的x，并使用DSA算法参数计算密钥：质数p，子素q，和基数g。</p>
+<p>这与由Key接口定义的不透明表示形成对比，您无法直接访问参数字段。换句话说，“不透明”表现为您提供了的有限的密钥方法——只有通过密钥接口定义的三种方法：getAlgorithm， getFormat，和getEncoded。</p>
+<p>密钥可以按照算法特定的方式或与算法无关的编码格式(如ASN.1)。例如，DSA私钥可以用它的分量来指定 x，p， q，和g(见DSAPrivateKeySpec)，或者它可使用其DER编码(见指定PKCS8EncodedKeySpec)。</p>
+<p>Java在java.security.spec和javax.crypto.spec包中定义了以下密钥规范接口和类：</p>
+<h3 id="KeySpec-Interface"><a href="#KeySpec-Interface" class="headerlink" title="KeySpec Interface"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/KeySpec.html" target="_blank" rel="noopener">KeySpec</a> Interface</h3><p>该接口不包含方法或常量。其唯一目的是为所有密钥规范进行分组(并提供类型安全)。所有密钥规范都必须实现此接口。</p>
+<p>Java提供了几个实现KeySpec接口的类：<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#DSAPrivateKeySpec" target="_blank" rel="noopener">DSAPrivateKeySpec</a>，<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#DSAPublicKeySpec" target="_blank" rel="noopener">DSAPublicKeySpec</a>，<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#RSAPrivateKeySpec" target="_blank" rel="noopener">RSAPrivateKeySpec</a>，<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#RSAPublicKeySpec" target="_blank" rel="noopener">RSAPublicKeySpec</a>，<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#EncodedKeySpec" target="_blank" rel="noopener">EncodedKeySpec</a>，<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#PKCS8EncodedKeySpec" target="_blank" rel="noopener">PKCS8EncodedKeySpec</a>，和 <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#X509EncodedKeySpec" target="_blank" rel="noopener">X509EncodedKeySpec</a>。</p>
+<p>如果您的Provider使用JDK尚未提供相应KeySpec类的密钥类型(例如，Your_PublicKey_type和Your_PrivateKey_type)，则有两种可能的方案，其中一种需要您实现自己的密钥规范：</p>
+<ul>
+<li><p>如果您的用户永远不必访问您的密钥类型的特定密钥材料值，则不必为您的密钥类型提供任何KeySpec类。</p>
+<p>  在这种情况下，您的用户将始终通过你的Provider提供的适当的KeyPairGenerator为该密钥类型密钥创建Your_PublicKey_type和Your_PrivateKey_type密钥。如果他们想要存储生成的密钥供以后使用，他们将检索密钥的编码(使用Key接口的getEncoded方法)。当他们想从编码中创建一个Your_PublicKey_type或Your_PrivateKey_type密钥时(例如，为了签名或验证初始化Signature对象)，他们从编码中创建一个X509EncodedKeySpec或PKCS8EncodedKeySpec实例，并将其提供给您的Provider为该算法提供的适当的KeyFactory实例，其generatePublic和generatePrivate方法将分别返回请求的PublicKey(Your_PublicKey_type的实例 )或PrivateKey(Your_PrivateKey_type的实例)。</p>
+</li>
+<li>如果您预计用户需要访问您的密钥类型的特定密钥材料值，或者需要从密钥材料和相关参数值中构建密钥类型的密钥，而不是从其编码(如上述情况)那样，则可以使用使用适当的构造函数方法指定新的KeySpec类(实现KeySpec接口的类 )，并获取用于返回密钥类型的密钥材料字段和相关参数值的方法。如通DSAPrivateKeySpec和DSAPublicKeySpec类那样，你会以类似的方式指定这些类 。您需要将这些类与您的Provider类一起提供，例如，作为Provider JAR文件的一部分。</li>
+</ul>
+<h3 id="DSAPrivateKeySpec类"><a href="#DSAPrivateKeySpec类" class="headerlink" title="DSAPrivateKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/DSAPrivateKeySpec.html" target="_blank" rel="noopener">DSAPrivateKeySpec</a>类</h3><p>该类(实现KeySpec接口)指定一个DSA私钥及其相关参数。它有以下方法：</p>
+<ul>
+<li>public BigInteger getX()：返回私钥x。</li>
+<li>public BigInteger getP()：返回素数p。</li>
+<li>public BigInteger getQ()：返回子素数q。</li>
+<li>public BigInteger getG()：返回基数g。</li>
+<li>这些方法返回私钥x和用于计算密钥的DSA算法参数：素数 p，次级素数q和基数 g。</li>
+</ul>
+<h3 id="DSAPublicKeySpec类"><a href="#DSAPublicKeySpec类" class="headerlink" title="DSAPublicKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/DSAPublicKeySpec.html" target="_blank" rel="noopener">DSAPublicKeySpec</a>类</h3><p>该类(实现KeySpec接口)指定一个DSA公钥及其相关参数。它有以下方法：</p>
+<ul>
+<li>public BigInteger getY()：返回公钥y。</li>
+<li>public BigInteger getP()：返回素数p。</li>
+<li>public BigInteger getQ()：返回子素数q。</li>
+<li>public BigInteger getG()：返回基数g。</li>
+</ul>
+<p>这些方法返回公钥y，以及用于计算密钥的DSA算法参数：素数 p，次级素数q和基数 g。</p>
+<h3 id="RSAPrivateKeySpec类"><a href="#RSAPrivateKeySpec类" class="headerlink" title="RSAPrivateKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/RSAPrivateKeySpec.html" target="_blank" rel="noopener">RSAPrivateKeySpec</a>类</h3><p>这个类(实现KeySpec接口)指定一个RSA私钥。它有以下方法：</p>
+<ul>
+<li>public BigInteger getModulus()：返回模数。</li>
+<li>public BigInteger getPrivateExponent()：返回私有指数。</li>
+</ul>
+<p>这些方法返回构成RSA私钥的RSA模数n和私有指数d值。</p>
+<h3 id="RSAPrivateCrtKeySpec类"><a href="#RSAPrivateCrtKeySpec类" class="headerlink" title="RSAPrivateCrtKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/RSAPrivateCrtKeySpec.html" target="_blank" rel="noopener">RSAPrivateCrtKeySpec</a>类</h3><p>这个类(继承RSAPrivateKeySpec类)使用中国剩余定理(CRT)信息值指定了PKCS＃1标准中定义的RSA私钥。它具有以下方法(除了从其超类继承的方法外RSAPrivateKeySpec)：</p>
+<ul>
+<li>public BigInteger getPublicExponent()：返回公共指数。</li>
+<li>public BigInteger getPrimeP()：返回素数P.</li>
+<li>public BigInteger getPrimeQ()：返回素数Q.</li>
+<li>public BigInteger getPrimeExponentP()：返回primeExponentP。</li>
+<li>public BigInteger getPrimeExponentQ()：返回primeExponentQ。</li>
+<li>public BigInteger getCrtCoefficient()：返回crtCoefficient。</li>
+</ul>
+<p>这些方法返回公用指数e和CRT信息整数：素因子p的模数n，该素数因子q的 n，指数d mod (p-1)，指数 d mod (q-1)，和中国剩余定理系数(inverse of q) mod p。</p>
+<p>RSA私钥在逻辑上仅由模数和私有指数组成。CRT值的存在旨在提高效率。</p>
+<h3 id="RSAPublicKeySpec类"><a href="#RSAPublicKeySpec类" class="headerlink" title="RSAPublicKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/RSAPublicKeySpec.html" target="_blank" rel="noopener">RSAPublicKeySpec</a>类</h3><p>这个类(实现KeySpec接口)指定一个RSA公钥。它有以下方法：</p>
+<ul>
+<li>public BigInteger getModulus()：返回模量。</li>
+<li>public BigInteger getPublicExponent()：返回公共指数。</li>
+</ul>
+<p>这些方法返回构成RSA公钥的RSA模数n和公开指数e值。</p>
+<h3 id="EncodedKeySpec类"><a href="#EncodedKeySpec类" class="headerlink" title="EncodedKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/EncodedKeySpec.html" target="_blank" rel="noopener">EncodedKeySpec</a>类</h3><p>这个抽象类(实现KeySpec接口)表示编码格式的公钥或私钥。</p>
+<ul>
+<li>public abstract byte[] getEncoded()：返回编码密钥。</li>
+<li>public abstract String getFormat()：返回编码格式的名称。</li>
+</ul>
+<p>JDK提供了两个实现EncodedKeySpec接口的类 ：PKCS8EncodedKeySpec和X509EncodedKeySpec。如果需要，您可以为这些或其他类型的密钥编码提供自己的EncodedKeySpec实现。</p>
+<h4 id="PKCS8EncodedKeySpec类"><a href="#PKCS8EncodedKeySpec类" class="headerlink" title="PKCS8EncodedKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/PKCS8EncodedKeySpec.html" target="_blank" rel="noopener">PKCS8EncodedKeySpec</a>类</h4><p>根据PKCS＃8标准中指定的格式，该类是EncodedKeySpec类的子类，表示私钥的DER编码。</p>
+<p>其getEncoded方法返回按照PKCS＃8标准编码的密钥字节。其getFormat方法返回字符串“PKCS＃8”。</p>
+<h4 id="X509EncodedKeySpec类"><a href="#X509EncodedKeySpec类" class="headerlink" title="X509EncodedKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/java/security/spec/X509EncodedKeySpec.html" target="_blank" rel="noopener">X509EncodedKeySpec</a>类</h4><p>该类是EncodedKeySpec的子类，根据X.509标准中指定的格式表示公钥或私钥的DER编码。</p>
+<p>其getEncoded方法返回按照X.509标准编码的关键字节。其getFormat方法返回字符串“X.509”。</p>
+<h3 id="DHPrivateKeySpec类"><a href="#DHPrivateKeySpec类" class="headerlink" title="DHPrivateKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/DHPrivateKeySpec.html" target="_blank" rel="noopener">DHPrivateKeySpec</a>类</h3><p>该类(实现KeySpec接口)指定一个Diffie-Hellman私钥及其相关参数。</p>
+<ul>
+<li>BigInteger getG()：返回基本生成器g。</li>
+<li>BigInteger getP()：返回质数模数p。</li>
+<li>BigInteger getX()：返回私有值x。</li>
+</ul>
+<h3 id="DHPublicKeySpec类"><a href="#DHPublicKeySpec类" class="headerlink" title="DHPublicKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/DHPublicKeySpec.html" target="_blank" rel="noopener">DHPublicKeySpec</a>类</h3><p>该类(实现KeySpec接口)指定具有相关参数的Diffie-Hellman公钥。</p>
+<ul>
+<li>BigInteger getG()：返回基本生成器g。</li>
+<li>BigInteger getP()：返回质数模数p。</li>
+<li>BigInteger getY()：返回公共值y。</li>
+</ul>
+<h3 id="DESKeySpec类"><a href="#DESKeySpec类" class="headerlink" title="DESKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/DESKeySpec.html" target="_blank" rel="noopener">DESKeySpec</a>类</h3><p>这个类(实现KeySpec接口)指定一个DES密钥。</p>
+<ul>
+<li>byte[] getKey()：返回DES密钥字节。</li>
+<li>static boolean isParityAdjusted(byte[] key, int offset)：检查给定的DES密钥材料是否进行奇偶校验。</li>
+<li>static boolean isWeak(byte[] key, int offset)：检查给定的DES密钥材料是弱还是半弱。</li>
+</ul>
+<h3 id="DESedeKeySpec类"><a href="#DESedeKeySpec类" class="headerlink" title="DESedeKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/DESedeKeySpec.html" target="_blank" rel="noopener">DESedeKeySpec</a>类</h3><p>这个类(实现KeySpec接口)指定一个DES-EDE(三重DES)密钥。</p>
+<ul>
+<li>byte[] getKey()：返回DES-EDE密钥。</li>
+<li>static boolean isParityAdjusted(byte[] key, int offset)：检查给定的DES-EDE密钥是否进行奇偶校验。</li>
+</ul>
+<h3 id="PBEKeySpec类"><a href="#PBEKeySpec类" class="headerlink" title="PBEKeySpec类"></a>PBEKeySpec类</h3><p>这个类实现了KeySpe接口。用户选择的密码可以使用基于密码的加密(PBE); 该密码可被视为一种原始密钥材料。使用此类的加密机制可以从原始密钥材料派生密钥。</p>
+<ul>
+<li>void clearPassword()：清除密码的内部副本。</li>
+<li>int getIterationCount()：如果未指定，则返回迭代计数或0。</li>
+<li>int getKeyLength()：返回要导出的密钥长度，如果未指定，则返回0。</li>
+<li>char[] getPassword()：返回密码的副本。</li>
+<li>byte[] getSalt()：返回salt的副本，如果未指定，则返回null。</li>
+</ul>
+<h3 id="SecretKeySpec类"><a href="#SecretKeySpec类" class="headerlink" title="SecretKeySpec类"></a><a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/SecretKeySpec.html" target="_blank" rel="noopener">SecretKeySpec</a>类</h3><p>这个类实现了KeySpec接口。因为它也实现了SecretKey接口，所以它可以用来以独立于Provider的方式构建一个SecretKey对象，也就是说，不需要通过基于Provider的SecretKeyFactory方式。</p>
+<ul>
+<li>boolean equals (Object obj)：指示其他某个对象是否“等于”这一个。</li>
+<li>String getAlgorithm()：返回与此密钥相关的算法的名称。</li>
+<li>byte[] getEncoded()：返回此密钥的密钥材料。</li>
+<li>String getFormat()：返回此密钥的编码格式的名称。</li>
+<li>int hashCode()：计算该对象的哈希码值。</li>
+</ul>
+<h2 id="秘密密钥生成"><a href="#秘密密钥生成" class="headerlink" title="秘密密钥生成"></a>秘密密钥生成</h2><p>如果为特定的秘密密钥算法提供秘密密钥生成器(javax.crypto.KeyGeneratorSpi的子类 )，则可以通过以下方式之一返回生成的秘密密钥对象(该密钥对象必须是javax.crypto.SecretKey实例 ，请参阅<a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/KeyGeneratorSpi.html#engineGenerateKey--" target="_blank" rel="noopener">engineGenerateKey</a>)： </p>
+<ul>
+<li>您可以实现一个类，其实例表示与您的密钥生成器关联的算法的密钥。您的密钥生成器实现返回该类的实例。如果密钥生成器生成的密钥具有特定于Provider的属性，则此方法非常有用。</li>
+<li>你的密钥生成器返回一个已经实现了javax.crypto.SecretKey接口的SecretKeySpec实例。您将(原始)密钥字节和与密钥生成器关联的秘密密钥算法的名称传递给SecretKeySpec构造函数。如果底层(原始)密钥字节可以表示为一个字节数组并且没有与它们相关的键参数，则此方法非常有用。</li>
+</ul>
+<h2 id="添加新的OID"><a href="#添加新的OID" class="headerlink" title="添加新的OID"></a>添加新的OID</h2><p>以下信息适用于未列为“Java加密体系结构参考指南” 附录A中的标准算法之一的算法的Provider。</p>
+<h3 id="从OID映射到名称"><a href="#从OID映射到名称" class="headerlink" title="从OID映射到名称"></a>从OID映射到名称</h3><p>有时，JCA需要从算法标识符(例如，如在证书中编码)中实例化加密算法实现，该算法标识符通过包括算法的对象标识符(OID)定义。例如，为了验证X.509证书上的签名，JCA根据证书中编码的签名算法标识符确定签名算法，为该算法实例化Signature对象，并初始化Signature对象以进行验证。</p>
+<p>为了让JCA找到您的算法，您必须在Provider主文件中提供算法的对象标识符作为算法的别名条目。</p>
+<pre><code>put(&quot;Alg.Alias.&lt;engine_type&gt;.1.2.3.4.5.6.7.8&quot;, &quot;&lt;algorithm_alias_name&gt;&quot;);
+</code></pre><p>请注意，如果您的算法已知存在多个对象标识符，则需要为每个已知对象标识符创建一个别名条目。</p>
+<p>示例，当您的算法(“Foo”)是签名算法，并且用户运行keytool命令并指定您的(签名)算法别名时，JCA需要执行此类映射。</p>
+<pre><code>％keytool -genkeypair -sigalg 1.2.3.4.5.6.7.8
+</code></pre><p>在这种情况下，您的Provider主文件应包含以下条目：</p>
+<pre><code>put(&quot;Signature.Foo&quot;, &quot;com.xyz.MyFooSignatureImpl&quot;);
+put(&quot;Alg.Alias.Signature.1.2.3.4.5.6.7.8&quot;, &quot;Foo&quot;);
+</code></pre><p>其他执行这种映射的示例：(1)当你的算法是一个keytype算法，你的程序解析一个证书(使用SUN Provider的X.509实现)并从证书中提取公钥以便初始化Signature对象进行验证，以及(2)当keytool用户在生成相应密钥对后尝试访问您的密钥类型的私钥(例如，执行数字签名)时。在这些情况下，您的Provider主文件应包含以下条目：</p>
+<pre><code>put(“KeyFactory.Foo”，“com.xyz.MyFooKeyFactoryImpl”);
+put(“Alg.Alias.KeyFactory.1.2.3.4.5.6.7.8”，“Foo”);
+</code></pre><h3 id="从名称映射到OID"><a href="#从名称映射到OID" class="headerlink" title="从名称映射到OID"></a>从名称映射到OID</h3><p>如果JCA需要执行逆映射(即从您的算法名称到其关联的OID)，则需要为其中一个已知算法的OID提供以下形式的别名条目：</p>
+<pre><code>put(&quot;Alg.Alias.Signature.OID.1.2.3.4.5.6.7.8&quot;, &quot;MySigAlg&quot;);
+</code></pre><p>如果您的算法在多个对象标识符下已知，请在“OID”前加上首选项。</p>
+<p>JCA需要执行此类映射的示例是用户在使用-sigalg选项的模式下运行keytool时的情况。例如，当调用-genkeypair和-certreq命令时，用户可以使用该-sigalg选项指定您的(签名)算法 </p>
+<h2 id="确保可出口性"><a href="#确保可出口性" class="headerlink" title="确保可出口性"></a>确保可出口性</h2><p>JCA的一个关键特性是如果满足某些条件的话JCA框架和Provider密码实现的可出口性。</p>
+<p>由于受少数国家政府的进口控制限制，JDK附带的权限策略文件规定可以使用“强”但有限的密码。这些文件的“无限制”版本对于那些生活在符合条件的国家(这是大多数国家/地区)中的加密强度没有限制。但只有“强”版本才能进入有政府要求限制的国家。JCA框架将强制执行已安装权限策略文件中指定的限制。</p>
+<p>正如其他地方所指出的那样，您可以只编写一个版本的Provider，实现最大强度的加密。由JCA而不是您的Provider执行任何权限策略文件规定的有关加密算法和可用于不同位置的小应用程序/应用程序的最大加密强度的限制。</p>
+<p>您的Provider为了使其能够集成到JCA而必须满足的条件如下：</p>
+<ul>
+<li>每个SPI实现类的构造函数都应该进行自我完整性检查，如<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#integritycheck" target="_blank" rel="noopener">Provider如何进行自我完整性检查</a>所述。</li>
+<li>Provider代码应该以这样的方式编写，即如果应用程序绕过JCA直接实例化，Provider将变得不可用。请参阅在实施和集成提供商部分中<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step1" target="_blank" rel="noopener">步骤1：编写您的服务实施代码</a>。</li>
+<li>Provider包必须由JCA框架信任的实体签名。(参见<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step61" target="_blank" rel="noopener">步骤6.1</a>至<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step62" target="_blank" rel="noopener">步骤6.2</a>)美国供应商可能出口到美国以外的Provider首先需要申请美国政府出口许可。(请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step10" target="_blank" rel="noopener">第10步</a>。)</li>
+</ul>
+<h1 id="附录A：-java-security-properties文件"><a href="#附录A：-java-security-properties文件" class="headerlink" title="附录A： java.security.properties文件"></a>附录A： java.security.properties文件</h1><p>以下是java.security显示已安装的Provider默认列表的文件的一部分。它出现在每个JRE安装中。该文件还包含其他条目，但为了简洁起见，我们仅在此处显示部分文件。请参阅完整的文件：</p>
+<ul>
+<li>Solaris, Linux, or Mac OS X: <java-home>/lib/security/java.security</java-home></li>
+<li>Windows: <java-home>\lib\security\java.security</java-home></li>
+</ul>
+<p>这里<java-home>指的是安装JRE的目录。</java-home></p>
+<p>请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html#Step5" target="_blank" rel="noopener">步骤5</a>以获取有关您的Provider信息的示例。</p>
+<pre><code>#这是“主安全属性文件”。
+
+#在这个文件中，各种安全属性被设置为供java.security类使用。这里用户可以静态注册加密包提供商(简称“Provider”)。
+#Provider指具体实现了Java安全API中密码方面的一个子集的一个或一组包。比如一个Provider可能实现一个或多个签名算法或消息摘要算法。
+
+#每个Provider都必须实现Provider类的一个子类。为了在此主安全属性文件中注册Provider，以security.provider.&lt;n&gt;=&lt;className&gt;格式指定Provider子类的名称和优先级。
+
+#这声明了一个提供者，并且指定了它的优先级n。优先级是请求算法的Provider搜索顺序(当没有指定Provider时)。顺序以1为基础; 1是最优选的，其次2，依此类推。
+
+#&lt;className&gt;必须指定Provider类的子类，其构造函数设置所需的各种属性的值，用于Java安全API来查找Provider实现的算法或其他能力。
+
+#在java.security中必须至少有一个Provider规范。有一个JDK标准的默认Provider。它被称为“SUN” Provider，并且其Provider子类名为Sun，在sun.security.provider包中。
+#“SUN” Provider通过以下方式注册：
+#security.provider.1=sun.security.provider.Sun
+#(数字1用于默认Provider)
+
+#注意：Provider可以通过调用Security类中的addProvider或insertProviderAt方法来动态注册。
+
+#Provider列表及其优先顺序(见下文)：
+
+
+security.provider.1=sun.security.pkcs11.SunPKCS11 \
+    ${java.home}/lib/security/sunpkcs11-solaris.cfg
+security.provider.2=sun.security.provider.Sun
+security.provider.3=sun.security.rsa.SunRsaSign
+security.provider.4=com.sun.net.ssl.internal.ssl.Provider
+security.provider.5=com.sun.crypto.provider.SunJCE
+security.provider.6=sun.security.jgss.SunProvider
+security.provider.7=com.sun.security.sasl.Provider
+security.provider.8=org.jcp.xml.dsig.internal.dom.XMLDSigRI
+security.provider.9=sun.security.smartcardio.SunPCSC
+
+＃其余文件已删除
+</code></pre>
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href= "/2018/03/JCA Guide Charpter6 Appendix.html" title= [译]JCA参考指南(六)：附录 >
+                    <div class="prevTitle">[译]JCA参考指南(六)：附录</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
+    
+    
+    <!--PC版-->
+
+    <!--PC版-->
+
+
+    
+    <!-- 评论 -->
+</main>
+            <!-- profile -->
+            
+        </div>
+        <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+    <div class="social">
+        
+    
+        
+            
+                <a href="mailto:978650866@qq.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/XShandow" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+    </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- 不蒜子  -->
+    
+    <div class="busuanzi-container">
+        <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span>
+        </span>
+    </div>
+    
+</footer>
+    </div>
+    <!-- toc -->
+    
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#介绍"><span class="toc-number">1.</span> <span class="toc-text">介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#谁应该读这篇文档"><span class="toc-number">1.1.</span> <span class="toc-text">谁应该读这篇文档</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#相关文档"><span class="toc-number">1.2.</span> <span class="toc-text">相关文档</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#术语注释"><span class="toc-number">1.2.1.</span> <span class="toc-text">术语注释</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引擎类和相应的SPI类"><span class="toc-number">2.</span> <span class="toc-text">引擎类和相应的SPI类</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#实现和整合Provider的步骤"><span class="toc-number">3.</span> <span class="toc-text">实现和整合Provider的步骤</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#第1步：编写您的服务实现代码"><span class="toc-number">3.1.</span> <span class="toc-text">第1步：编写您的服务实现代码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤1-1：其他JCA提供程序对加密实现的要求和建议"><span class="toc-number">3.1.1.</span> <span class="toc-text">步骤1.1：其他JCA提供程序对加密实现的要求和建议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第2步：为您的提供商提供一个名称"><span class="toc-number">3.2.</span> <span class="toc-text">第2步：为您的提供商提供一个名称</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第3步：编写您的Master类，Provider的一个子类"><span class="toc-number">3.3.</span> <span class="toc-text">第3步：编写您的Master类，Provider的一个子类</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤3-1：密码实现的其他步骤"><span class="toc-number">3.3.1.</span> <span class="toc-text">步骤3.1：密码实现的其他步骤</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第4步：编译你的代码"><span class="toc-number">3.4.</span> <span class="toc-text">第4步：编译你的代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第5步：将您的提供程序放入Jar文件中"><span class="toc-number">3.5.</span> <span class="toc-text">第5步：将您的提供程序放入Jar文件中</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第6步：签名JAR文件"><span class="toc-number">3.6.</span> <span class="toc-text">第6步：签名JAR文件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤6-1：获取代码签名证书"><span class="toc-number">3.6.1.</span> <span class="toc-text">步骤6.1：获取代码签名证书</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤6-2：签署您的提供商"><span class="toc-number">3.6.2.</span> <span class="toc-text">步骤6.2：签署您的提供商</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第7步：准备测试"><span class="toc-number">3.7.</span> <span class="toc-text">第7步：准备测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤7-1：安装提供程序"><span class="toc-number">3.7.1.</span> <span class="toc-text">步骤7.1：安装提供程序</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#安装提供程序类"><span class="toc-number">3.7.1.1.</span> <span class="toc-text">安装提供程序类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#配置提供程序"><span class="toc-number">3.7.1.2.</span> <span class="toc-text">配置提供程序</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#步骤7-2：设置Provider权限"><span class="toc-number">3.7.2.</span> <span class="toc-text">步骤7.2：设置Provider权限</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第8步：编写和编译您的测试程序"><span class="toc-number">3.8.</span> <span class="toc-text">第8步：编写和编译您的测试程序</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第9步：运行您的测试程序"><span class="toc-number">3.9.</span> <span class="toc-text">第9步：运行您的测试程序</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第10步：如果需要，申请美国政府出口许可"><span class="toc-number">3.10.</span> <span class="toc-text">第10步：如果需要，申请美国政府出口许可</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第11步：记录您的提供商及其支持的服务"><span class="toc-number">3.11.</span> <span class="toc-text">第11步：记录您的提供商及其支持的服务</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Message-Digests-and-MAC"><span class="toc-number">3.11.1.</span> <span class="toc-text">Message Digests and MAC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Key-Pair-Generators"><span class="toc-number">3.11.2.</span> <span class="toc-text">Key Pair Generators</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Key-Factories"><span class="toc-number">3.11.3.</span> <span class="toc-text">Key Factories</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Algorithm-Parameter-Generators"><span class="toc-number">3.11.4.</span> <span class="toc-text">Algorithm Parameter Generators</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Signature-Algorithms"><span class="toc-number">3.11.5.</span> <span class="toc-text">Signature Algorithms</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#随机数生成-SecureRandom-算法"><span class="toc-number">3.11.6.</span> <span class="toc-text">随机数生成(SecureRandom)算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#证书工厂"><span class="toc-number">3.11.7.</span> <span class="toc-text">证书工厂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥库"><span class="toc-number">3.11.8.</span> <span class="toc-text">密钥库</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第12步：使您的类文件和文档可供客户使用"><span class="toc-number">3.12.</span> <span class="toc-text">第12步：使您的类文件和文档可供客户使用</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#提供者如何进行自我完整性检查"><span class="toc-number">4.</span> <span class="toc-text">提供者如何进行自我完整性检查</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#示例代码注释"><span class="toc-number">4.1.</span> <span class="toc-text">示例代码注释</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#查找Provider-JAR文件：基础知识"><span class="toc-number">4.2.</span> <span class="toc-text">查找Provider JAR文件：基础知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#确定提供商的JAR文件URL"><span class="toc-number">4.2.1.</span> <span class="toc-text">确定提供商的JAR文件URL</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建一个JAR文件参考文件JarFile"><span class="toc-number">4.2.2.</span> <span class="toc-text">创建一个JAR文件参考文件JarFile</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#验证提供程序JAR文件：基础知识"><span class="toc-number">4.3.</span> <span class="toc-text">验证提供程序JAR文件：基础知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#验证设置"><span class="toc-number">4.3.1.</span> <span class="toc-text">验证设置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JAR文件签名检查"><span class="toc-number">4.3.2.</span> <span class="toc-text">JAR文件签名检查</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#验证签名"><span class="toc-number">4.4.</span> <span class="toc-text">验证签名</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#确保签名者受信任"><span class="toc-number">4.5.</span> <span class="toc-text">确保签名者受信任</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#获取证书列表"><span class="toc-number">4.5.1.</span> <span class="toc-text">获取证书列表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#识别每个签名者并确定是否值得信任"><span class="toc-number">4.5.2.</span> <span class="toc-text">识别每个签名者并确定是否值得信任</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关于myJCE示例代码的注释"><span class="toc-number">4.6.</span> <span class="toc-text">关于myJCE示例代码的注释</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#更多的实现细节和要求"><span class="toc-number">5.</span> <span class="toc-text">更多的实现细节和要求</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#别名"><span class="toc-number">5.1.</span> <span class="toc-text">别名</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#服务依赖性"><span class="toc-number">5.2.</span> <span class="toc-text">服务依赖性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#签名和消息摘要算法"><span class="toc-number">5.2.1.</span> <span class="toc-text">签名和消息摘要算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#签名和-伪-随机数生成算法"><span class="toc-number">5.2.2.</span> <span class="toc-text">签名和(伪)随机数生成算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥对生成和消息摘要算法"><span class="toc-number">5.2.3.</span> <span class="toc-text">密钥对生成和消息摘要算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#算法参数生成和消息摘要算法"><span class="toc-number">5.2.4.</span> <span class="toc-text">算法参数生成和消息摘要算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥库和消息摘要算法"><span class="toc-number">5.2.5.</span> <span class="toc-text">密钥库和消息摘要算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥对生成算法和算法参数生成器"><span class="toc-number">5.2.6.</span> <span class="toc-text">密钥对生成算法和算法参数生成器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥对生成，算法参数生成和-伪-随机数生成算法"><span class="toc-number">5.2.7.</span> <span class="toc-text">密钥对生成，算法参数生成和(伪)随机数生成算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#算法参数生成器和算法参数"><span class="toc-number">5.2.8.</span> <span class="toc-text">算法参数生成器和算法参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#签名和密钥对生成算法或密钥工厂"><span class="toc-number">5.2.9.</span> <span class="toc-text">签名和密钥对生成算法或密钥工厂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#密钥库和密钥和证书工厂"><span class="toc-number">5.2.10.</span> <span class="toc-text">密钥库和密钥和证书工厂</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#默认初始化"><span class="toc-number">5.3.</span> <span class="toc-text">默认初始化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#默认密钥对生成器参数要求"><span class="toc-number">5.4.</span> <span class="toc-text">默认密钥对生成器参数要求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Provider-Service类"><span class="toc-number">5.5.</span> <span class="toc-text">Provider.Service类</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#签名格式"><span class="toc-number">5.6.</span> <span class="toc-text">签名格式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DSA接口及其必需的实现"><span class="toc-number">5.7.</span> <span class="toc-text">DSA接口及其必需的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAKeyPairGenerator"><span class="toc-number">5.7.1.</span> <span class="toc-text">DSAKeyPairGenerator</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAParams实现"><span class="toc-number">5.7.2.</span> <span class="toc-text">DSAParams实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAPrivateKey-和-DSAPublicKey实现"><span class="toc-number">5.7.3.</span> <span class="toc-text">DSAPrivateKey 和 DSAPublicKey实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RSA接口及其必需的实现"><span class="toc-number">5.8.</span> <span class="toc-text">RSA接口及其必需的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现"><span class="toc-number">5.8.1.</span> <span class="toc-text">RSAPrivateKey，RSAPrivateCrtKey和RSAPublicKey实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Diffie-Hellman接口及其必需的实现"><span class="toc-number">5.9.</span> <span class="toc-text">Diffie-Hellman接口及其必需的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#DHPrivateKey和DHPublicKey实现"><span class="toc-number">5.9.1.</span> <span class="toc-text">DHPrivateKey和DHPublicKey实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#其他算法类型的接口"><span class="toc-number">5.10.</span> <span class="toc-text">其他算法类型的接口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#算法参数规范接口和类"><span class="toc-number">5.11.</span> <span class="toc-text">算法参数规范接口和类</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#AlgorithmParameterSpec接口"><span class="toc-number">5.11.1.</span> <span class="toc-text">AlgorithmParameterSpec接口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAParameterSpec类"><span class="toc-number">5.11.2.</span> <span class="toc-text">DSAParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IvParameterSpec类"><span class="toc-number">5.11.3.</span> <span class="toc-text">IvParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#OAEPParameterSpec类"><span class="toc-number">5.11.4.</span> <span class="toc-text">OAEPParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PBEParameterSpec类"><span class="toc-number">5.11.5.</span> <span class="toc-text">PBEParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RC2ParameterSpec类"><span class="toc-number">5.11.6.</span> <span class="toc-text">RC2ParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RC5ParameterSpec类"><span class="toc-number">5.11.7.</span> <span class="toc-text">RC5ParameterSpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DHParameterSpec类"><span class="toc-number">5.11.8.</span> <span class="toc-text">DHParameterSpec类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#密钥工厂所需的密钥规范接口和类"><span class="toc-number">5.12.</span> <span class="toc-text">密钥工厂所需的密钥规范接口和类</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#KeySpec-Interface"><span class="toc-number">5.12.1.</span> <span class="toc-text">KeySpec Interface</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAPrivateKeySpec类"><span class="toc-number">5.12.2.</span> <span class="toc-text">DSAPrivateKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DSAPublicKeySpec类"><span class="toc-number">5.12.3.</span> <span class="toc-text">DSAPublicKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RSAPrivateKeySpec类"><span class="toc-number">5.12.4.</span> <span class="toc-text">RSAPrivateKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RSAPrivateCrtKeySpec类"><span class="toc-number">5.12.5.</span> <span class="toc-text">RSAPrivateCrtKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RSAPublicKeySpec类"><span class="toc-number">5.12.6.</span> <span class="toc-text">RSAPublicKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EncodedKeySpec类"><span class="toc-number">5.12.7.</span> <span class="toc-text">EncodedKeySpec类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#PKCS8EncodedKeySpec类"><span class="toc-number">5.12.7.1.</span> <span class="toc-text">PKCS8EncodedKeySpec类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#X509EncodedKeySpec类"><span class="toc-number">5.12.7.2.</span> <span class="toc-text">X509EncodedKeySpec类</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DHPrivateKeySpec类"><span class="toc-number">5.12.8.</span> <span class="toc-text">DHPrivateKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DHPublicKeySpec类"><span class="toc-number">5.12.9.</span> <span class="toc-text">DHPublicKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DESKeySpec类"><span class="toc-number">5.12.10.</span> <span class="toc-text">DESKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DESedeKeySpec类"><span class="toc-number">5.12.11.</span> <span class="toc-text">DESedeKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PBEKeySpec类"><span class="toc-number">5.12.12.</span> <span class="toc-text">PBEKeySpec类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SecretKeySpec类"><span class="toc-number">5.12.13.</span> <span class="toc-text">SecretKeySpec类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#秘密密钥生成"><span class="toc-number">5.13.</span> <span class="toc-text">秘密密钥生成</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#添加新的OID"><span class="toc-number">5.14.</span> <span class="toc-text">添加新的OID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#从OID映射到名称"><span class="toc-number">5.14.1.</span> <span class="toc-text">从OID映射到名称</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#从名称映射到OID"><span class="toc-number">5.14.2.</span> <span class="toc-text">从名称映射到OID</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#确保可出口性"><span class="toc-number">5.15.</span> <span class="toc-text">确保可出口性</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#附录A：-java-security-properties文件"><span class="toc-number">6.</span> <span class="toc-text">附录A： java.security.properties文件</span></a></li></ol>
+    </div>
+    
+    <div class="back-top iconfont-archer">&#xe639;</div>
+    <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+          <div class="sidebar-panel-archives">
+    <!-- 在ejs中将archive按照时间排序 -->
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div class="total-archive"> Total : 11 </div>
+    
+    <div class="post-archive">
+    
+    
+    
+    
+    <div class="archive-year"> 2018 </div>
+    <ul class="year-list">
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/19</span><a class="archive-post-title" href= "/2018/03/JCE Provider如何实现.html" >[译]如何在JCA中实现Provider</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/15</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter6 Appendix.html" >[译]JCA参考指南(六)：附录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" >[译]JCA参考指南(五)：代码示例</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" >[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter3 JCA in SSL TLS.html" >[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2 Core Class and Interfaces.html" >[译]JCA参考指南(二)：核心类和接口</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter1 Introduction.html" >[译]JCA参考指南(一)：介绍</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/04</span><a class="archive-post-title" href= "/2018/03/MiJia LED 写字灯.html" >MIJIA 小米生态链LED写字灯开箱测评</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring Boot and JavaFX8.html" >[译]Spring Boot and JavaFX</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Hexo Problem.html" >Hexo安装踩坑记录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Logitech  K800.html" >Logitech K800 键盘开箱以及使用感受</a>
+        </li>
+    
+    </div>
+  </div>
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+    
+        <span class="sidebar-tag-name" data-tags="踩坑"><span class="iconfont-archer">&#xe606;</span>踩坑</span>
+    
+        <span class="sidebar-tag-name" data-tags="JCE"><span class="iconfont-archer">&#xe606;</span>JCE</span>
+    
+        <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
+    
+        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+    缺失模块。<br/>
+    1、请确保node版本大于6.2<br/>
+    2、在博客根目录（注意不是archer根目录）执行以下命令：<br/>
+    <span style="color: #f75357; font-size: 1rem; line-height: 2rem;">npm i hexo-generator-json-content --save</span><br/>
+    3、在根目录_config.yml里添加配置：
+    <pre style="color: #787878; font-size: 0.6rem;">
+jsonContent:
+  meta: false
+  pages: false
+  posts:
+    title: true
+    date: true
+    path: true
+    text: false
+    raw: false
+    content: false
+    slug: false
+    updated: false
+    comments: false
+    link: false
+    permalink: false
+    excerpt: false
+    categories: true
+    tags: true</pre>
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="记录"><span class="iconfont-archer">&#xe60a;</span>记录</span>
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
+    
+        <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+    </div>
+</div> 
+    <script>
+    var siteMeta = {
+        root: '/',
+        author: 'XShandow'
+    }
+</script>
+    <!-- busuanzi  -->
+    
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+    <!-- CNZZ  -->
+    
+    </div>
+    <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
+    
+    </body>
+</html>
+
+

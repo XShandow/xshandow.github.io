@@ -9,7 +9,7 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
-    <title>XShandow&#39;s Studio</title>
+    <title>[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA · XShandow&#39;s Studio</title>
     <style type="text/css">
     @font-face {
         font-family: 'Oswald-Regular';
@@ -65,6 +65,8 @@
 
     <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
     <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         
     <link rel="icon" href= /assets/favicon.ico>
     <script>
@@ -253,12 +255,23 @@
 </head>
 
     
+        <body class="post-body">
+    
     
 <header class="header">
 
     <div class="read-progress"></div>
     <div class="header-sidebar-menu">&#xe775;</div>
     <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</a>
+            </div>
+    </div>
     
     <a class="home-link" href=/>XShandow's Studio</a>
 </header>
@@ -272,64 +285,128 @@
 
 
 
+height:40vh;
+
 >
     
     <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
             
-    <div class="site-intro-img" style="background-image: url(/)"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
     <div class="site-intro-placeholder"></div>
     <div class="site-intro-meta">
         <!-- 标题  -->
         <h1 class="intro-title">
             <!-- 主页  -->
             
+            [译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA
+            <!-- 404 -->
+            
         </h1>
         <!-- 副标题 -->
         <p class="intro-subtitle">
             <!-- 主页副标题  -->
             
+            
+            <!-- 404 -->
+            
         </p>
         <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JCE">JCE</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/13</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
         
     </div>
 </div>
         <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
 
         <div class="container container-unloaded">
-            <main class="main index-page">
+            <main class="main post-page">
+    <article class="article-entry">
+        <p><strong>References:</strong></p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java Cryptography Architecture (JCA) Reference Guide</a></li>
+<li><a href="http://blog.csdn.net/u012741741/article/details/79209984" target="_blank" rel="noopener">中文翻译参考</a></li>
+</ul>
+<h1 id="如何在SSL-TLS实现中使用JCA"><a href="#如何在SSL-TLS实现中使用JCA" class="headerlink" title="如何在SSL/TLS实现中使用JCA"></a>如何在SSL/TLS实现中使用JCA</h1><p>了解JCA类后，可以考虑如何组合这些类来实现像SSL/TLS这样的高级网络协议。<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#SSLOverview" target="_blank" rel="noopener">JSSE参考指南</a>中的<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#SSLOverview" target="_blank" rel="noopener">SSL/TLS概述</a>部分从高层次描述了协议的工作原理。由于非对称(公钥)密码操作比对称操作(密钥)慢得多，所以使用公钥保护对称密钥，然后用对称密钥来保护实际的应用数据。非常简单，SSL/TLS握手包括交换初始化数据，执行一些公钥操作以获得对称密钥，然后使用该密钥来加密下一步的通信。</p>
+<p><strong>注意</strong>：这里提供的细节只是简单地展示了如何使用上面的一些类。本部分不会提供足够的信息来构建SSL/TLS实现。有关更多详细信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html" target="_blank" rel="noopener">JSSE参考指南</a>和<a href="http://www.ietf.org/rfc/rfc2246.txt" target="_blank" rel="noopener">RFC 2246：TLS协议</a>。</p>
+<p>假设SSL/TLS实现将作为JSSE Provider使用。首先编写终将在Security类的Provider列表中注册的Provider类的具体实现。这个Provider主要提供从算法名称到实际实现类的映射。 (即：“SSLContext.TLS” -&gt;“com.foo.TLSImpl”)当应用程序通过SSLContext.getInstance(“TLS”)请求一个“TLS”实例时，将根据请求的算法查询Provider的列表，创建一个适当的实例。</p>
+<p>在讨论实际握手的细节之前，需要快速回顾一些JSSE的体系结构。JSSE体系结构的核心是SSLContext。上下文最终创建实际实现SSL/TLS协议的对象(SSLSocket和SSLEngine)。SSLContexts使用两个回调类KeyManager和TrustManager进行初始化，它们允许应用程序首先选择要发送的验证资料，然后再验证对等方发送的凭证。</p>
+<p>JSSE KeyManager负责选择向对方显示哪些凭据。可能是很多算法，但是常见的策略是维护磁盘文件中KeyStore存储的RSA或DSA公钥/私钥对以及X509Certificate。当从文件初始化并加载KeyStore对象时，将使用KeyFactory把文件的原始字节转换为PublicKey和PrivateKey对象，并使用CertificateFactory转换证书链的字节。当需要凭证时，KeyManager简单地参考这个KeyStore对象，并确定展示哪个凭证。</p>
+<p>KeyStore的内容最初可能是使用keytool等程序创建的。keytool创建一个RSA或DSA KeyPairGenerator，并使用适当的密钥大小进行初始化。然后使用这个生成器来创建一个KeyPair，keytool将把这个新创建的证书存储到KeyStore，最终写入磁盘。</p>
+<p>JSSE TrustManager负责验证从对方收到的凭证。验证凭证有多种方式：其中之一是创建CertPath对象，并让JDK的内置公钥基础结构(PKI)框架处理验证。在内部，CertPath实现可能会创建一个Signature对象，并使用它来验证证书链中的每个签名。</p>
+<p>有了这个架构的基本理解，我们可以看一下SSL/TLS握手中的一些步骤。客户端首先发送一个ClientHello消息给服务器。服务器选择要使用的密码组，然后将其发回到ServerHello消息中，并根据套件选择开始创建JCA对象。下面的例子中，我们使用仅验证服务端。</p>
+<p><img src="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/sslmessages.gif" alt=""></p>
+<p><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/img_text/sslmessages.html" target="_blank" rel="noopener">图：SSL消息描述</a></p>
+<p>在第一个示例中，服务器尝试使用基于RSA的加密套件，例如TLS_RSA_WITH_AES_128_CBC_SHA。查询服务器的KeyManager，并返回相应的RSA条目。服务器的凭证(即：证书/公钥)将在服务器的证书消息中发送。客户端的TrustManager验证服务器的证书，如果接受，客户端使用SecureRandom对象生成一些随机字节。然后使用非对称RSA Cipher对象对其进行加密，Cipher使用在服务器证书中找到的PublicKey初始化。此加密数据在客户端密钥交换消息中发送。服务器将在解密模式下调用Cipher使用相应的PrivateKey恢复字节。这些字节然后用于生成实际的加密密钥。</p>
+<p>在另一个例子中，选择使用DSA签名算法的Diffie-Hellman密钥协商算法，例如TLS_DHE_DSS_WITH_AES_128_CBC_SHA。双方必须使用KeyPairGenerator生成新的临时DH公私钥对。每个生成器创建DH密钥，然后使用KeyFactory和DHPublicKeySpec 可以进一步转换成块。然后每一方创建KeyAgreement对象并使用各自的DH PrivateKeys初始化。服务端在ServerKeyExchange消息(DSA算法签名保护)中发送自己的公钥，客户端在ClientKeyExchange消息中发送自己的公钥。当公钥使用另一个KeyFactory重组后，发送给协商对象。然后密钥协商对象生成约定的字节，然后用于建立实际的加密密钥。</p>
+<p>一旦生成了实际的加密密钥，对称密钥就被用来初始化一个对称的Cipher对象，并且这个Cipher被用来保护所有传输中的数据。为了帮助确定数据是否已被修改，创建MessageDigest并接收发往网络的数据的副本。当数据包完成时，摘要(哈希)被附加到数据，并且整个数据包被Cipher加密。如果使用诸如AES的分组密码，则必须填充数据以形成完整的块。在另一端，这些步骤简单地颠倒过来。</p>
+<p>再次声明，这是非常简单的，但给了一个想法，这些类可能被结合起来创建一个更高层次的协议。</p>
+
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" title= [译]JCA参考指南(四)：如何使应用程序“免于”加密限制 >
+                    <div class="nextTitle">[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href= "/2018/03/JCA Guide Charpter2 Core Class and Interfaces.html" title= [译]JCA参考指南(二)：核心类和接口 >
+                    <div class="prevTitle">[译]JCA参考指南(二)：核心类和接口</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
     
     
+    <!--PC版-->
+
+    <!--PC版-->
+
+
     
-        <article class="index-post">
-            <a class="abstract-title" href = "/2018/03/Hexo Problem.html" >
-                
-                    <span>Hexo安装踩坑记录</span>
-            </a>
-            <div class="abstract-content">
-                
-            </div>
-            <div class="abstract-post-meta">
-                <!-- date  -->
-                <div class="abstract-date">
-                    <span class="abstract-calander iconfont-archer">&#xe676;</span><span class="abstract-time">2018/03/02</span>
-                </div>
-                <!-- tags  -->
-                
-                <div class= abstract-tags >
-    
-        <a class="post-tag" href="javascript:void(0);" data-tags = "踩坑">踩坑</a>
-    
-</div>
-                
-            </div>
-        </article>
-    
-    <!-- paginator  -->
-    
-    <nav class="page-nav">
-        <a class="extend prev" rel="prev" href="/archives/2018/03/">&#60; PREV</a><a class="page-number" href="/archives/2018/03/">1</a><span class="page-number current">2</span>
-    </nav>
-    
+    <!-- 评论 -->
 </main>
             <!-- profile -->
             
@@ -401,6 +478,24 @@
 </footer>
     </div>
     <!-- toc -->
+    
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#如何在SSL-TLS实现中使用JCA"><span class="toc-number">1.</span> <span class="toc-text">如何在SSL/TLS实现中使用JCA</span></a></li></ol>
+    </div>
     
     <div class="back-top iconfont-archer">&#xe639;</div>
     <div class="sidebar sidebar-hide">
@@ -662,6 +757,8 @@ jsonContent:
     
     </div>
     <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
     
     </body>
 </html>

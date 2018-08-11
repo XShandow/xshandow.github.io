@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html>
+    <!-- title -->
+
+
+
+
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+    <title>[译]JCA参考指南(六)：附录 · XShandow&#39;s Studio</title>
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+        box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s 1;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+</style>
+
+    <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        
+    <link rel="icon" href= /assets/favicon.ico>
+    <script>
+  // load webfont-loader async, and add callback function
+  function async(u, c) {
+    var d = document, t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0];
+    o.src = u;
+    if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+    s.parentNode.insertBefore(o, s);
+  }
+  
+  // get user agent
+  var browser = {
+    versions: function () {
+      var u = window.navigator.userAgent;
+      return {
+        userAgent: u,
+        trident: u.indexOf('Trident') > -1, //IE内核
+        presto: u.indexOf('Presto') > -1, //opera内核
+        webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+        gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+        mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+        ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+        android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+        iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+        iPad: u.indexOf('iPad') > -1, //是否为iPad
+        webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+        weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+        uc: u.indexOf('UCBrowser') > -1 //是否为android下的UC浏览器
+      };
+    }()
+  }
+  console.log("userAgent:" + browser.versions.userAgent);
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded');
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document.getElementsByClassName('intro-title')[0].classList.add('intro-fade-in');
+      document.getElementsByClassName('intro-subtitle')[0].classList.add('intro-fade-in');
+      var postIntroTags = document.getElementsByClassName('post-intro-tags')[0],
+        postIntroMeat = document.getElementsByClassName('post-intro-meta')[0];
+      if (postIntroTags) {
+        postIntroTags.classList.add('post-fade-in');
+      }
+      if (postIntroMeat) {
+        postIntroMeat.classList.add('post-fade-in');
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb(){
+    if (browser.versions.uc) {
+      console.log("UCBrowser");
+      fontLoaded();
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular']
+        },
+        loading: function () {  //所有字体开始加载
+          // console.log('loading');
+        },
+        active: function () {  //所有字体已渲染
+          fontLoaded();
+        },
+        inactive: function () { //字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout');
+          fontLoaded();
+        },
+        timeout: 5000 // Set the timeout to two seconds
+      });
+    }
+  }
+
+  async("https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js", asyncCb)
+</script>
+    <script>
+        (function (w) {
+            "use strict";
+            // rel=preload support test
+            if (!w.loadCSS) {
+                w.loadCSS = function () { };
+            }
+            // define on the loadCSS obj
+            var rp = loadCSS.relpreload = {};
+            // rel=preload feature support test
+            // runs once and returns a function for compat purposes
+            rp.support = (function () {
+                var ret;
+                try {
+                    ret = w.document.createElement("link").relList.supports("preload");
+                } catch (e) {
+                    ret = false;
+                }
+                return function () {
+                    return ret;
+                };
+            })();
+
+            // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+            // then change that media back to its intended value on load
+            rp.bindMediaToggle = function (link) {
+                // remember existing media attr for ultimate state, or default to 'all'
+                var finalMedia = link.media || "all";
+
+                function enableStylesheet() {
+                    link.media = finalMedia;
+                }
+
+                // bind load handlers to enable media
+                if (link.addEventListener) {
+                    link.addEventListener("load", enableStylesheet);
+                } else if (link.attachEvent) {
+                    link.attachEvent("onload", enableStylesheet);
+                }
+
+                // Set rel and non-applicable media type to start an async request
+                // note: timeout allows this to happen async to let rendering continue in IE
+                setTimeout(function () {
+                    link.rel = "stylesheet";
+                    link.media = "only x";
+                });
+                // also enable media after 3 seconds,
+                // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+                setTimeout(enableStylesheet, 3000);
+            };
+
+            // loop through link elements in DOM
+            rp.poly = function () {
+                // double check this to prevent external calls from running
+                if (rp.support()) {
+                    return;
+                }
+                var links = w.document.getElementsByTagName("link");
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    // qualify links to those with rel=preload and as=style attrs
+                    if (link.rel === "preload" && link.getAttribute("as") === "style" && !link.getAttribute("data-loadcss")) {
+                        // prevent rerunning on link
+                        link.setAttribute("data-loadcss", true);
+                        // bind listeners to toggle media back
+                        rp.bindMediaToggle(link);
+                    }
+                }
+            };
+
+            // if unsupported, run the polyfill
+            if (!rp.support()) {
+                // run once at least
+                rp.poly();
+
+                // rerun poly on an interval until onload
+                var run = w.setInterval(rp.poly, 500);
+                if (w.addEventListener) {
+                    w.addEventListener("load", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                } else if (w.attachEvent) {
+                    w.attachEvent("onload", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                }
+            }
+            // commonjs
+            if (typeof exports !== "undefined") {
+                exports.loadCSS = loadCSS;
+            }
+            else {
+                w.loadCSS = loadCSS;
+            }
+        }(typeof global !== "undefined" ? global : this));
+    </script>
+    <script src="//cdn.staticfile.org/jquery/3.2.1/jquery.min.js" defer></script>
+    <script src="/scripts/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script>
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+</head>
+
+    
+        <body class="post-body">
+    
+    
+<header class="header">
+
+    <div class="read-progress"></div>
+    <div class="header-sidebar-menu">&#xe775;</div>
+    <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译]JCA参考指南(六)：附录</a>
+            </div>
+    </div>
+    
+    <a class="home-link" href=/>XShandow's Studio</a>
+</header>
+    <div class="wrapper">
+        <div class="site-intro" style=
+
+
+
+
+
+
+
+
+height:40vh;
+
+>
+    
+    <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
+            
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+            [译]JCA参考指南(六)：附录
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+            
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JCE">JCE</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/15</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
+        
+    </div>
+</div>
+        <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+
+        <div class="container container-unloaded">
+            <main class="main post-page">
+    <article class="article-entry">
+        <p><strong>References:</strong></p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java Cryptography Architecture (JCA) Reference Guide</a></li>
+<li><a href="http://blog.csdn.net/u012741741/article/details/79209984" target="_blank" rel="noopener">中文翻译参考</a></li>
+</ul>
+<h1 id="附录A：标准名称"><a href="#附录A：标准名称" class="headerlink" title="附录A：标准名称"></a>附录A：标准名称</h1><p>JDK安全API要求并使用一组用于算法、证书和密钥库类型的标准名称。之前在附录A和其他安全规范(JSSE/CertPath/etc)中找到的规范名称已经在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html" target="_blank" rel="noopener">标准名称文档</a>中进行了组合。本文档还包含有关算法规范的更多信息。<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html" target="_blank" rel="noopener">Sun Provider文档</a>中可以找到具体的Provider信息。</p>
+<p>由于历史原因JDK中的加密实现主要是通过几个不同的Provider分发的(Sun，SunJSSE，SunJCE，SunRsaSign)。请注意，这些Provider不是在所有JDK实现中可以获得的，因此，真正的可移植应用程序应该调用不指定特定的Provider的getInstance()。 指定特定Provider的应用程序可能无法利用为底层操作环境(如PKCS或Microsoft的CAPI)获取本机Provider的优势。</p>
+<p>SunPKCS11 Provider本身不包含任何加密算法，而是将请求指向底层PKCS11实现。应该参照<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/p11guide.html" target="_blank" rel="noopener">PKCS11参考指南</a>和底层PKCS11实现来确定是否可以在PKCS11 Provider中获得期望的算法。同样，在Windows系统上，SunMSCAPI Provider不提供任何加密功能，而是将请求路由到底层操作系统进行处理。</p>
+<h1 id="附录B：权限策略文件格式"><a href="#附录B：权限策略文件格式" class="headerlink" title="附录B：权限策略文件格式"></a>附录B：权限策略文件格式</h1><p>JCA将其权限策略文件表示为具有相应权限声明的Java风格策略文件。如<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/PolicyFiles.html" target="_blank" rel="noopener">默认策略实施和策略文件语法</a>中所述，Java策略文件指定允许来自指定代码源的代码拥有哪些权限。权限表示对系统资源的访问。在JCA的情况下，“资源”是加密算法，并且不需要指定代码源，因为加密限制适用于所有代码。</p>
+<p>权限策略文件由一个非常基本的“授权条目”组成，其中包含一个或多个“权限条目”。</p>
+<pre><code>grant {
+    &lt;permission entries&gt;;
+};
+</code></pre><p>权限策略文件中权限条目的格式为：</p>
+<pre><code>permission &lt;crypto permission class name&gt;[ &lt;alg_name&gt;
+    [[, &lt;exemption mechanism name&gt;][, &lt;maxKeySize&gt;
+     [, &lt;AlgorithmParameterSpec class name&gt;, &lt;parameters for constructing an AlgorithmParameterSpec object&gt;]]]];
+</code></pre><p>将“Blowfish”算法限制为最大密钥大小为64位的示例权限策略文件是：</p>
+<pre><code>grant {
+    permission javax.crypto.CryptoPermission &quot;Blowfish&quot;, 64;
+    // ...
+};
+</code></pre><p>权限条目必须以单词permission开头。上面模板中的<crypto permission="" class="" name="">实际上指定权限类名，例如javax.crypto.CryptoPermission。加密权限类反映了应用程序/applet在特定环境中使用特定密钥大小的某些算法的能力。有两个加密权限类：CryptoPermission和CryptoAllPermission。指定CryptoAllPermission类意味着所有与密码相关的权限，即它指定没有密码相关的限制。</crypto></p>
+<p>使用&lt;alg_name&gt;时，是一个带引号的字符串，用于指定加密算法(如“AES”或“RSA”)的标准名称(请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A</a>)。</p>
+<p>指定<exemption mechanism="" name="">时，是带引号的字符串，表示免除机制，如果强制执行，则可以减少加密限制。可以使用的豁免机制名称包括“KeyRecovery”，“KeyEscrow”和“KeyWeaking”。</exemption></p>
+<p><maxkeysize>是一个整数，指定特定算法允许的最大密钥大小(以位为单位)。</maxkeysize></p>
+<p>对于一些算法来说，仅仅根据密钥大小来指定算法强度可能是不够的。例如，在“RC5”算法的情况下，还必须考虑回合的数量。对于其强度需要表示为大于密钥大小的算法，权限条目还应指定AlgorithmParameterSpec类名(例如javax.crypto.spec.RC5ParameterSpec)以及用于构造指定AlgorithmParameterSpec对象的参数列表。</p>
+<p>出现在权限条目中的项目必须以特定顺序出现。一个条目以分号结尾。</p>
+<p>大小写对于标识符(grant，permission)来说并不重要，但对于<crypto permission="" class="" name=""> 或者作为值传入的任何字符串都是重要的。</crypto></p>
+<p>注意：“*”可以用作任何权限输入选项的通配符。 例如，对于&lt;alg_name&gt; 选项，“*”(不带引号)表示“所有算法”。</p>
+<h1 id="附录C：“强”管辖权策略文件允许的最大密钥大小"><a href="#附录C：“强”管辖权策略文件允许的最大密钥大小" class="headerlink" title="附录C：“强”管辖权策略文件允许的最大密钥大小"></a>附录C：“强”管辖权策略文件允许的最大密钥大小</h1><p>由于进口控制限制，Java SE开发工具包附带的权限策略文件允许使用“强大”但有限的加密技术。有关更多信息，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html#importlimits" target="_blank" rel="noopener">加密算法的进口限制</a>。</p>
+<h1 id="附录D：示例程序"><a href="#附录D：示例程序" class="headerlink" title="附录D：示例程序"></a>附录D：示例程序</h1><h2 id="Diffie-Hellman-Key-Exchange-between-2-Parties"><a href="#Diffie-Hellman-Key-Exchange-between-2-Parties" class="headerlink" title="Diffie-Hellman Key Exchange between 2 Parties"></a>Diffie-Hellman Key Exchange between 2 Parties</h2><pre><code>/*
+ * Copyright (c) 1997, 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   - Neither the name of Oracle nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS
+ * IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+import java.io.*;
+import java.math.BigInteger;
+import java.security.*;
+import java.security.spec.*;
+import java.security.interfaces.*;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+import javax.crypto.interfaces.*;
+import com.sun.crypto.provider.SunJCE;
+
+public class DHKeyAgreement2 {
+    private DHKeyAgreement2() {}
+    public static void main(String argv[]) throws Exception {
+
+        /*
+         * Alice creates her own DH key pair with 2048-bit key size
+         */
+        System.out.println(&quot;ALICE: Generate DH keypair ...&quot;);
+        KeyPairGenerator aliceKpairGen = KeyPairGenerator.getInstance(&quot;DH&quot;);
+        aliceKpairGen.initialize(2048);
+        KeyPair aliceKpair = aliceKpairGen.generateKeyPair();
+
+        // Alice creates and initializes her DH KeyAgreement object
+        System.out.println(&quot;ALICE: Initialization ...&quot;);
+        KeyAgreement aliceKeyAgree = KeyAgreement.getInstance(&quot;DH&quot;);
+        aliceKeyAgree.init(aliceKpair.getPrivate());
+
+        // Alice encodes her public key, and sends it over to Bob.
+        byte[] alicePubKeyEnc = aliceKpair.getPublic().getEncoded();
+
+        /*
+         * Let&apos;s turn over to Bob. Bob has received Alice&apos;s public key
+         * in encoded format.
+         * He instantiates a DH public key from the encoded key material.
+         */
+        KeyFactory bobKeyFac = KeyFactory.getInstance(&quot;DH&quot;);
+        X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(alicePubKeyEnc);
+
+        PublicKey alicePubKey = bobKeyFac.generatePublic(x509KeySpec);
+
+        /*
+         * Bob gets the DH parameters associated with Alice&apos;s public key.
+         * He must use the same parameters when he generates his own key
+         * pair.
+         */
+        DHParameterSpec dhParamFromAlicePubKey = ((DHPublicKey)alicePubKey).getParams();
+
+        // Bob creates his own DH key pair
+        System.out.println(&quot;BOB: Generate DH keypair ...&quot;);
+        KeyPairGenerator bobKpairGen = KeyPairGenerator.getInstance(&quot;DH&quot;);
+        bobKpairGen.initialize(dhParamFromAlicePubKey);
+        KeyPair bobKpair = bobKpairGen.generateKeyPair();
+
+        // Bob creates and initializes his DH KeyAgreement object
+        System.out.println(&quot;BOB: Initialization ...&quot;);
+        KeyAgreement bobKeyAgree = KeyAgreement.getInstance(&quot;DH&quot;);
+        bobKeyAgree.init(bobKpair.getPrivate());
+
+        // Bob encodes his public key, and sends it over to Alice.
+        byte[] bobPubKeyEnc = bobKpair.getPublic().getEncoded();
+
+        /*
+         * Alice uses Bob&apos;s public key for the first (and only) phase
+         * of her version of the DH
+         * protocol.
+         * Before she can do so, she has to instantiate a DH public key
+         * from Bob&apos;s encoded key material.
+         */
+        KeyFactory aliceKeyFac = KeyFactory.getInstance(&quot;DH&quot;);
+        x509KeySpec = new X509EncodedKeySpec(bobPubKeyEnc);
+        PublicKey bobPubKey = aliceKeyFac.generatePublic(x509KeySpec);
+        System.out.println(&quot;ALICE: Execute PHASE1 ...&quot;);
+        aliceKeyAgree.doPhase(bobPubKey, true);
+
+        /*
+         * Bob uses Alice&apos;s public key for the first (and only) phase
+         * of his version of the DH
+         * protocol.
+         */
+        System.out.println(&quot;BOB: Execute PHASE1 ...&quot;);
+        bobKeyAgree.doPhase(alicePubKey, true);
+
+        /*
+         * At this stage, both Alice and Bob have completed the DH key
+         * agreement protocol.
+         * Both generate the (same) shared secret.
+         */
+        try {
+            byte[] aliceSharedSecret = aliceKeyAgree.generateSecret();
+            int aliceLen = aliceSharedSecret.length;
+            byte[] bobSharedSecret = new byte[aliceLen];
+            int bobLen;
+        } catch (ShortBufferException e) {
+            System.out.println(e.getMessage());
+        }        // provide output buffer of required size
+        bobLen = bobKeyAgree.generateSecret(bobSharedSecret, 0);
+        System.out.println(&quot;Alice secret: &quot; +
+                toHexString(aliceSharedSecret));
+        System.out.println(&quot;Bob secret: &quot; +
+                toHexString(bobSharedSecret));
+        if (!java.util.Arrays.equals(aliceSharedSecret, bobSharedSecret))
+            throw new Exception(&quot;Shared secrets differ&quot;);
+        System.out.println(&quot;Shared secrets are the same&quot;);
+
+        /*
+         * Now let&apos;s create a SecretKey object using the shared secret
+         * and use it for encryption. First, we generate SecretKeys for the
+         * &quot;AES&quot; algorithm (based on the raw shared secret data) and
+         * Then we use AES in CBC mode, which requires an initialization
+         * vector (IV) parameter. Note that you have to use the same IV
+         * for encryption and decryption: If you use a different IV for
+         * decryption than you used for encryption, decryption will fail.
+         *
+         * If you do not specify an IV when you initialize the Cipher
+         * object for encryption, the underlying implementation will generate
+         * a random one, which you have to retrieve using the
+         * javax.crypto.Cipher.getParameters() method, which returns an
+         * instance of java.security.AlgorithmParameters. You need to transfer
+         * the contents of that object (e.g., in encoded format, obtained via
+         * the AlgorithmParameters.getEncoded() method) to the party who will
+         * do the decryption. When initializing the Cipher for decryption,
+         * the (reinstantiated) AlgorithmParameters object must be explicitly
+         * passed to the Cipher.init() method.
+         */
+        System.out.println(&quot;Use shared secret as SecretKey object ...&quot;);
+        SecretKeySpec bobAesKey = new SecretKeySpec(bobSharedSecret, 0, 16, &quot;AES&quot;);
+        SecretKeySpec aliceAesKey = new SecretKeySpec(aliceSharedSecret, 0, 16, &quot;AES&quot;);
+
+        /*
+         * Bob encrypts, using AES in CBC mode
+         */
+        Cipher bobCipher = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;);
+        bobCipher.init(Cipher.ENCRYPT_MODE, bobAesKey);
+        byte[] cleartext = &quot;This is just an example&quot;.getBytes();
+        byte[] ciphertext = bobCipher.doFinal(cleartext);
+
+        // Retrieve the parameter that was used, and transfer it to Alice in
+        // encoded format
+        byte[] encodedParams = bobCipher.getParameters().getEncoded();
+
+        /*
+         * Alice decrypts, using AES in CBC mode
+         */
+
+        // Instantiate AlgorithmParameters object from parameter encoding
+        // obtained from Bob
+        AlgorithmParameters aesParams = AlgorithmParameters.getInstance(&quot;AES&quot;);
+        aesParams.init(encodedParams);
+        Cipher aliceCipher = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;);
+        aliceCipher.init(Cipher.DECRYPT_MODE, aliceAesKey, aesParams);
+        byte[] recovered = aliceCipher.doFinal(ciphertext);
+        if (!java.util.Arrays.equals(cleartext, recovered))
+            throw new Exception(&quot;AES in CBC mode recovered text is &quot; +
+                    &quot;different from cleartext&quot;);
+        System.out.println(&quot;AES in CBC mode recovered text is &quot;
+                &quot;same as cleartext&quot;);
+    }
+
+    /*
+     * Converts a byte to hex digit and writes to the supplied buffer
+     */
+    private static void byte2hex(byte b, StringBuffer buf) {
+        char[] hexChars = { &apos;0&apos;, &apos;1&apos;, &apos;2&apos;, &apos;3&apos;, &apos;4&apos;, &apos;5&apos;, &apos;6&apos;, &apos;7&apos;, &apos;8&apos;,
+                &apos;9&apos;, &apos;A&apos;, &apos;B&apos;, &apos;C&apos;, &apos;D&apos;, &apos;E&apos;, &apos;F&apos; };
+        int high = ((b &amp; 0xf0) &gt;&gt; 4);
+        int low = (b &amp; 0x0f);
+        buf.append(hexChars[high]);
+        buf.append(hexChars[low]);
+    }
+
+    /*
+     * Converts a byte array to hex string
+     */
+    private static String toHexString(byte[] block) {
+        StringBuffer buf = new StringBuffer();
+        int len = block.length;
+        for (int i = 0; i &lt; len; i++) {
+            byte2hex(block[i], buf);
+            if (i &lt; len-1) {
+                buf.append(&quot;:&quot;);
+            }
+        }
+        return buf.toString();
+    }
+}
+</code></pre><h2 id="Diffie-Hellman-Key-Exchange-between-3-Parties"><a href="#Diffie-Hellman-Key-Exchange-between-3-Parties" class="headerlink" title="Diffie-Hellman Key Exchange between 3 Parties"></a>Diffie-Hellman Key Exchange between 3 Parties</h2><pre><code>/*
+ * Copyright (c) 1997, 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   - Neither the name of Oracle nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS
+ * IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+import java.security.*;
+import java.security.spec.*;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+import javax.crypto.interfaces.*;
+/*
+* This program executes the Diffie-Hellman key agreement protocol between
+* 3 parties: Alice, Bob, and Carol using a shared 2048-bit DH parameter.
+*/
+public class DHKeyAgreement3 {
+    private DHKeyAgreement3() {}
+    public static void main(String argv[]) throws Exception {
+    // Alice creates her own DH key pair with 2048-bit key size
+        System.out.println(&quot;ALICE: Generate DH keypair ...&quot;);
+        KeyPairGenerator aliceKpairGen = KeyPairGenerator.getInstance(&quot;DH&quot;);
+        aliceKpairGen.initialize(2048);
+        KeyPair aliceKpair = aliceKpairGen.generateKeyPair();
+    // This DH parameters can also be constructed by creating a
+    // DHParameterSpec object using agreed-upon values
+        DHParameterSpec dhParamShared = ((DHPublicKey)aliceKpair.getPublic()).getParams();
+    // Bob creates his own DH key pair using the same params
+        System.out.println(&quot;BOB: Generate DH keypair ...&quot;);
+        KeyPairGenerator bobKpairGen = KeyPairGenerator.getInstance(&quot;DH&quot;);
+        bobKpairGen.initialize(dhParamShared);
+        KeyPair bobKpair = bobKpairGen.generateKeyPair();
+    // Carol creates her own DH key pair using the same params
+        System.out.println(&quot;CAROL: Generate DH keypair ...&quot;);
+        KeyPairGenerator carolKpairGen = KeyPairGenerator.getInstance(&quot;DH&quot;);
+        carolKpairGen.initialize(dhParamShared);
+        KeyPair carolKpair = carolKpairGen.generateKeyPair();
+    // Alice initialize
+        System.out.println(&quot;ALICE: Initialize ...&quot;);
+        KeyAgreement aliceKeyAgree = KeyAgreement.getInstance(&quot;DH&quot;);
+        aliceKeyAgree.init(aliceKpair.getPrivate());
+    // Bob initialize
+        System.out.println(&quot;BOB: Initialize ...&quot;);
+        KeyAgreement bobKeyAgree = KeyAgreement.getInstance(&quot;DH&quot;);
+        bobKeyAgree.init(bobKpair.getPrivate());
+    // Carol initialize
+        System.out.println(&quot;CAROL: Initialize ...&quot;);
+        KeyAgreement carolKeyAgree = KeyAgreement.getInstance(&quot;DH&quot;);
+        carolKeyAgree.init(carolKpair.getPrivate());
+    // Alice uses Carol&apos;s public key
+        Key ac = aliceKeyAgree.doPhase(carolKpair.getPublic(), false);
+    // Bob uses Alice&apos;s public key
+        Key ba = bobKeyAgree.doPhase(aliceKpair.getPublic(), false);
+    // Carol uses Bob&apos;s public key
+        Key cb = carolKeyAgree.doPhase(bobKpair.getPublic(), false);
+    // Alice uses Carol&apos;s result from above
+        aliceKeyAgree.doPhase(cb, true);
+    // Bob uses Alice&apos;s result from above
+        bobKeyAgree.doPhase(ac, true);
+    // Carol uses Bob&apos;s result from above
+        carolKeyAgree.doPhase(ba, true);
+    // Alice, Bob and Carol compute their secrets
+        byte[] aliceSharedSecret = aliceKeyAgree.generateSecret();
+        System.out.println(&quot;Alice secret: &quot; + toHexString(aliceSharedSecret));
+        byte[] bobSharedSecret = bobKeyAgree.generateSecret();
+        System.out.println(&quot;Bob secret: &quot; + toHexString(bobSharedSecret));
+        byte[] carolSharedSecret = carolKeyAgree.generateSecret();
+        System.out.println(&quot;Carol secret: &quot; + toHexString(carolSharedSecret));
+    // Compare Alice and Bob
+        if (!java.util.Arrays.equals(aliceSharedSecret, bobSharedSecret))
+            throw new Exception(&quot;Alice and Bob differ&quot;);
+        System.out.println(&quot;Alice and Bob are the same&quot;);
+    // Compare Bob and Carol
+        if (!java.util.Arrays.equals(bobSharedSecret, carolSharedSecret))
+            throw new Exception(&quot;Bob and Carol differ&quot;);
+        System.out.println(&quot;Bob and Carol are the same&quot;);
+    }
+/*
+ * Converts a byte to hex digit and writes to the supplied buffer
+ */
+    private static void byte2hex(byte b, StringBuffer buf) {
+        char[] hexChars = { &apos;0&apos;, &apos;1&apos;, &apos;2&apos;, &apos;3&apos;, &apos;4&apos;, &apos;5&apos;, &apos;6&apos;, &apos;7&apos;, &apos;8&apos;,
+                            &apos;9&apos;, &apos;A&apos;, &apos;B&apos;, &apos;C&apos;, &apos;D&apos;, &apos;E&apos;, &apos;F&apos; };
+        int high = ((b &amp; 0xf0) &gt;&gt; 4);
+        int low = (b &amp; 0x0f);
+        buf.append(hexChars[high]);
+        buf.append(hexChars[low]);
+    }
+/*
+ * Converts a byte array to hex string
+ */
+    private static String toHexString(byte[] block) {
+        StringBuffer buf = new StringBuffer();
+        int len = block.length;
+        for (int i = 0; i &lt; len; i++) {
+            byte2hex(block[i], buf);
+            if (i &lt; len-1) {
+                buf.append(&quot;:&quot;);
+            }
+        }
+        return buf.toString();
+    }
+}
+</code></pre><h2 id="Blowfish-Cipher-Example"><a href="#Blowfish-Cipher-Example" class="headerlink" title="Blowfish Cipher Example"></a>Blowfish Cipher Example</h2><pre><code>/*
+ * Copyright (c) 1997, 2001, Oracle and/or its affiliates. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   - Neither the name of Oracle nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS
+ * IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.security.*;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+
+/**
+ * This program generates a Blowfish key, retrieves its raw bytes, and
+ * then reinstantiates a Blowfish key from the key bytes.
+ * The reinstantiated key is used to initialize a Blowfish cipher for
+ * encryption.
+ */
+
+public class BlowfishKey {
+
+    public static void main(String[] args) throws Exception {
+
+        KeyGenerator kgen = KeyGenerator.getInstance(&quot;Blowfish&quot;);
+        SecretKey skey = kgen.generateKey();
+        byte[] raw = skey.getEncoded();
+        SecretKeySpec skeySpec = new SecretKeySpec(raw, &quot;Blowfish&quot;);
+
+        Cipher cipher = Cipher.getInstance(&quot;Blowfish&quot;);
+        cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+        byte[] encrypted =
+            cipher.doFinal(&quot;This is just an example&quot;.getBytes());
+    }
+}
+</code></pre><h2 id="HMAC-SHA256-Example"><a href="#HMAC-SHA256-Example" class="headerlink" title="HMAC-SHA256 Example"></a>HMAC-SHA256 Example</h2><pre><code>/*
+ * Copyright (c) 1997, 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   - Neither the name of Oracle nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS
+ * IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.security.*;
+import javax.crypto.*;
+
+/**
+ * This program demonstrates how to generate a secret-key object for
+ * HMACSHA256, and initialize an HMACSHA256 object with it.
+ */
+
+public class initMac {
+
+    public static void main(String[] args) throws Exception {
+
+        // Generate secret key for HmacSHA256
+        KeyGenerator kg = KeyGenerator.getInstance(&quot;HmacSHA256&quot;);
+        SecretKey sk = kg.generateKey();
+
+        // Get instance of Mac object implementing HmacSHA256, and
+        // initialize it with the above secret key
+        Mac mac = Mac.getInstance(&quot;HmacSHA256&quot;);
+        mac.init(sk);
+        byte[] result = mac.doFinal(&quot;Hi There&quot;.getBytes());
+    }
+}
+</code></pre><h2 id="Reading-ASCII-Passwords-From-an-InputStream-Example"><a href="#Reading-ASCII-Passwords-From-an-InputStream-Example" class="headerlink" title="Reading ASCII Passwords From an InputStream Example"></a>Reading ASCII Passwords From an InputStream Example</h2><pre><code>/*
+ * @(#)ReadPassword.java  1.1 06/06/07
+ *
+ * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+ */
+
+import java.util.*;
+import java.io.*;
+import java.security.*;
+
+public class ReadPassword {
+    /**
+     * Read a password from the InputStream &quot;in&quot;.
+     * &lt;p&gt;
+     * As Strings are immutable, passwords should be stored as an array
+     * of characters, which can be blanked out when no longer needed.
+     * &lt;p&gt;
+     * If the provided InputStream is the System&apos;s Console, this method
+     * uses the non-echoing readPassword() method of java.io.Console
+     * (new to JDK 6).  If not, a fallback implementation is used.
+     * &lt;p&gt;
+     * NOTE:  For expository purposes, and because some applications do
+     * not understand multi-byte characters, only 8-bit ASCII passwords
+     * are handled here.
+     * &lt;p&gt;
+     * NOTE:  If a SecurityManager is used, the default standard
+     * java.policy file found in the JDK (i.e.
+     * &lt;java-home&gt;/lib/security/java.policy) allows reading the
+     * line.separator property.  If your environment is different, this
+     * code will need to be granted the appropriate privilege.
+     *
+     * @param   in
+     *          the InputStream used to obtain the password.
+     *
+     * @return  A character array containing the password or passphrase,
+     *          not including the line-termination characters,
+     *          or null if an end of stream has been reached.
+     *
+     * @throws  IOException
+     *          if an I/O problem occurs
+     */
+    public static final char[] readPassword(InputStream in)
+            throws IOException {
+
+        /*
+         * If available, directly use the java.io.Console class to
+         * avoid character echoing.
+         */
+        if (in == System.in &amp;&amp; System.console() != null) {
+            // readPassword returns &quot;&quot; if you just print ENTER,
+            return System.console().readPassword();
+        }
+
+        /*
+         * If a console is not available, read the InputStream
+         * directly.  This approach may cause password echoing.
+         *
+         * Since different operating systems have different End-Of-Line
+         * (EOL) sequences, this algorithm should allow for
+         * platform-independent implementations.  Typical EOL sequences
+         * are a single line feed (&apos;\n&apos;), or a carriage return/linefeed
+         * combination (&apos;\r\n&apos;).  However, some OS&apos;s use a single
+         * a carriage return (&apos;\r&apos;), which complicates portability.
+         *
+         * Since we may not have the ability to push bytes back into the
+         * InputStream, another approach is used here.  The javadoc for
+         * &lt;code&gt;java.lang.System.getProperties()&lt;/code&gt; specifies that
+         * the set of system properties will contain a system-specific
+         * value for the &quot;line.separator&quot;.  Scan for this character
+         * sequence instead of hard-coding a particular sequence.
+         */
+
+        /*
+         * Enclose the getProperty in a doPrivileged block to minimize
+         * the call stack permission required.
+         */
+        char [] EOL = AccessController.doPrivileged(
+            new PrivilegedAction&lt;char[]&gt;() {
+                public char[] run() {
+                    String s = System.getProperty(&quot;line.separator&quot;);
+                    // Shouldn&apos;t happen.
+                    if (s == null) {
+                        throw new RuntimeException(
+                            &quot;line.separator not defined&quot;);
+                    }
+                    return s.toCharArray();
+                }
+            });
+
+        char [] buffer = new char[128];
+        try {
+            int len = 0;                // len of data in buffer.
+            boolean done = false;       // found the EOL sequence
+            int b;                      // byte read
+
+            while (!done) {
+                /*
+                 * realloc if necessary
+                 */
+                if (len &gt;= buffer.length) {
+                    char [] newbuffer = new char[len + 128];
+                    System.arraycopy(buffer, 0, newbuffer, 0, len);
+                    Arrays.fill(buffer, &apos; &apos;);
+                    buffer = newbuffer;
+                }
+
+                /*
+                 * End-of-Stream?
+                 */
+                if ((b = in.read()) == -1) {
+                    // Return as much as we have, null otherwise.
+                    if (len == 0) {
+                        return null;
+                    }
+                    break;
+                } else {
+                    /*
+                     * NOTE:  In the simple PBE example here,
+                     * only 8 bit ASCII characters are handled.
+                     */
+                    buffer[len++] = (char) b;
+                }
+
+                /*
+                 * check for the EOL sequence.  Do we have enough bytes?
+                 */
+                if (len &gt;= EOL.length) {
+                    int i = 0;
+                    for (i = 0; i &lt; EOL.length; i++) {
+                        if (buffer[len - EOL.length + i] != EOL[i]) {
+                            break;
+                        }
+                    }
+                    done = (i == EOL.length);
+                }
+            }
+
+            /*
+             * If we found the EOL, strip the EOL chars.
+             */
+            char [] result = new char[done ? len - EOL.length : len];
+            System.arraycopy(buffer, 0, result, 0, result.length);
+
+            return result;
+        } finally {
+            /*
+             * Zero out the buffer.
+             */
+            if (buffer != null) {
+                Arrays.fill(buffer, &apos; &apos;);
+            }
+        }
+    }
+}
+</code></pre>
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/JCE Provider如何实现.html" title= [译]如何在JCA中实现Provider >
+                    <div class="nextTitle">[译]如何在JCA中实现Provider</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" title= [译]JCA参考指南(五)：代码示例 >
+                    <div class="prevTitle">[译]JCA参考指南(五)：代码示例</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
+    
+    
+    <!--PC版-->
+
+    <!--PC版-->
+
+
+    
+    <!-- 评论 -->
+</main>
+            <!-- profile -->
+            
+        </div>
+        <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+    <div class="social">
+        
+    
+        
+            
+                <a href="mailto:978650866@qq.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/XShandow" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+    </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- 不蒜子  -->
+    
+    <div class="busuanzi-container">
+        <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span>
+        </span>
+    </div>
+    
+</footer>
+    </div>
+    <!-- toc -->
+    
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#附录A：标准名称"><span class="toc-number">1.</span> <span class="toc-text">附录A：标准名称</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#附录B：权限策略文件格式"><span class="toc-number">2.</span> <span class="toc-text">附录B：权限策略文件格式</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#附录C：“强”管辖权策略文件允许的最大密钥大小"><span class="toc-number">3.</span> <span class="toc-text">附录C：“强”管辖权策略文件允许的最大密钥大小</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#附录D：示例程序"><span class="toc-number">4.</span> <span class="toc-text">附录D：示例程序</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Diffie-Hellman-Key-Exchange-between-2-Parties"><span class="toc-number">4.1.</span> <span class="toc-text">Diffie-Hellman Key Exchange between 2 Parties</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Diffie-Hellman-Key-Exchange-between-3-Parties"><span class="toc-number">4.2.</span> <span class="toc-text">Diffie-Hellman Key Exchange between 3 Parties</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Blowfish-Cipher-Example"><span class="toc-number">4.3.</span> <span class="toc-text">Blowfish Cipher Example</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HMAC-SHA256-Example"><span class="toc-number">4.4.</span> <span class="toc-text">HMAC-SHA256 Example</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reading-ASCII-Passwords-From-an-InputStream-Example"><span class="toc-number">4.5.</span> <span class="toc-text">Reading ASCII Passwords From an InputStream Example</span></a></li></ol></li></ol>
+    </div>
+    
+    <div class="back-top iconfont-archer">&#xe639;</div>
+    <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+          <div class="sidebar-panel-archives">
+    <!-- 在ejs中将archive按照时间排序 -->
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div class="total-archive"> Total : 11 </div>
+    
+    <div class="post-archive">
+    
+    
+    
+    
+    <div class="archive-year"> 2018 </div>
+    <ul class="year-list">
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/19</span><a class="archive-post-title" href= "/2018/03/JCE Provider如何实现.html" >[译]如何在JCA中实现Provider</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/15</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter6 Appendix.html" >[译]JCA参考指南(六)：附录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" >[译]JCA参考指南(五)：代码示例</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" >[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter3 JCA in SSL TLS.html" >[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2 Core Class and Interfaces.html" >[译]JCA参考指南(二)：核心类和接口</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter1 Introduction.html" >[译]JCA参考指南(一)：介绍</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/04</span><a class="archive-post-title" href= "/2018/03/MiJia LED 写字灯.html" >MIJIA 小米生态链LED写字灯开箱测评</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring Boot and JavaFX8.html" >[译]Spring Boot and JavaFX</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Hexo Problem.html" >Hexo安装踩坑记录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Logitech  K800.html" >Logitech K800 键盘开箱以及使用感受</a>
+        </li>
+    
+    </div>
+  </div>
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+    
+        <span class="sidebar-tag-name" data-tags="踩坑"><span class="iconfont-archer">&#xe606;</span>踩坑</span>
+    
+        <span class="sidebar-tag-name" data-tags="JCE"><span class="iconfont-archer">&#xe606;</span>JCE</span>
+    
+        <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
+    
+        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+    缺失模块。<br/>
+    1、请确保node版本大于6.2<br/>
+    2、在博客根目录（注意不是archer根目录）执行以下命令：<br/>
+    <span style="color: #f75357; font-size: 1rem; line-height: 2rem;">npm i hexo-generator-json-content --save</span><br/>
+    3、在根目录_config.yml里添加配置：
+    <pre style="color: #787878; font-size: 0.6rem;">
+jsonContent:
+  meta: false
+  pages: false
+  posts:
+    title: true
+    date: true
+    path: true
+    text: false
+    raw: false
+    content: false
+    slug: false
+    updated: false
+    comments: false
+    link: false
+    permalink: false
+    excerpt: false
+    categories: true
+    tags: true</pre>
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="记录"><span class="iconfont-archer">&#xe60a;</span>记录</span>
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
+    
+        <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+    </div>
+</div> 
+    <script>
+    var siteMeta = {
+        root: '/',
+        author: 'XShandow'
+    }
+</script>
+    <!-- busuanzi  -->
+    
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+    <!-- CNZZ  -->
+    
+    </div>
+    <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
+    
+    </body>
+</html>
+
+

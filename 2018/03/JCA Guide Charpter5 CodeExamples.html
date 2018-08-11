@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html>
+    <!-- title -->
+
+
+
+
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+    <title>[译]JCA参考指南(五)：代码示例 · XShandow&#39;s Studio</title>
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+        box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s 1;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+</style>
+
+    <link rel="preload" href= /css/style.css?v=20180317 as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" type="text/css" href= /css/mobile.css?v=20180317 media="(max-width: 980px)"/>
+    
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        
+    <link rel="icon" href= /assets/favicon.ico>
+    <script>
+  // load webfont-loader async, and add callback function
+  function async(u, c) {
+    var d = document, t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0];
+    o.src = u;
+    if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+    s.parentNode.insertBefore(o, s);
+  }
+  
+  // get user agent
+  var browser = {
+    versions: function () {
+      var u = window.navigator.userAgent;
+      return {
+        userAgent: u,
+        trident: u.indexOf('Trident') > -1, //IE内核
+        presto: u.indexOf('Presto') > -1, //opera内核
+        webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+        gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+        mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+        ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+        android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+        iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+        iPad: u.indexOf('iPad') > -1, //是否为iPad
+        webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+        weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+        uc: u.indexOf('UCBrowser') > -1 //是否为android下的UC浏览器
+      };
+    }()
+  }
+  console.log("userAgent:" + browser.versions.userAgent);
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded');
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document.getElementsByClassName('intro-title')[0].classList.add('intro-fade-in');
+      document.getElementsByClassName('intro-subtitle')[0].classList.add('intro-fade-in');
+      var postIntroTags = document.getElementsByClassName('post-intro-tags')[0],
+        postIntroMeat = document.getElementsByClassName('post-intro-meta')[0];
+      if (postIntroTags) {
+        postIntroTags.classList.add('post-fade-in');
+      }
+      if (postIntroMeat) {
+        postIntroMeat.classList.add('post-fade-in');
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb(){
+    if (browser.versions.uc) {
+      console.log("UCBrowser");
+      fontLoaded();
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular']
+        },
+        loading: function () {  //所有字体开始加载
+          // console.log('loading');
+        },
+        active: function () {  //所有字体已渲染
+          fontLoaded();
+        },
+        inactive: function () { //字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout');
+          fontLoaded();
+        },
+        timeout: 5000 // Set the timeout to two seconds
+      });
+    }
+  }
+
+  async("https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js", asyncCb)
+</script>
+    <script>
+        (function (w) {
+            "use strict";
+            // rel=preload support test
+            if (!w.loadCSS) {
+                w.loadCSS = function () { };
+            }
+            // define on the loadCSS obj
+            var rp = loadCSS.relpreload = {};
+            // rel=preload feature support test
+            // runs once and returns a function for compat purposes
+            rp.support = (function () {
+                var ret;
+                try {
+                    ret = w.document.createElement("link").relList.supports("preload");
+                } catch (e) {
+                    ret = false;
+                }
+                return function () {
+                    return ret;
+                };
+            })();
+
+            // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+            // then change that media back to its intended value on load
+            rp.bindMediaToggle = function (link) {
+                // remember existing media attr for ultimate state, or default to 'all'
+                var finalMedia = link.media || "all";
+
+                function enableStylesheet() {
+                    link.media = finalMedia;
+                }
+
+                // bind load handlers to enable media
+                if (link.addEventListener) {
+                    link.addEventListener("load", enableStylesheet);
+                } else if (link.attachEvent) {
+                    link.attachEvent("onload", enableStylesheet);
+                }
+
+                // Set rel and non-applicable media type to start an async request
+                // note: timeout allows this to happen async to let rendering continue in IE
+                setTimeout(function () {
+                    link.rel = "stylesheet";
+                    link.media = "only x";
+                });
+                // also enable media after 3 seconds,
+                // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+                setTimeout(enableStylesheet, 3000);
+            };
+
+            // loop through link elements in DOM
+            rp.poly = function () {
+                // double check this to prevent external calls from running
+                if (rp.support()) {
+                    return;
+                }
+                var links = w.document.getElementsByTagName("link");
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    // qualify links to those with rel=preload and as=style attrs
+                    if (link.rel === "preload" && link.getAttribute("as") === "style" && !link.getAttribute("data-loadcss")) {
+                        // prevent rerunning on link
+                        link.setAttribute("data-loadcss", true);
+                        // bind listeners to toggle media back
+                        rp.bindMediaToggle(link);
+                    }
+                }
+            };
+
+            // if unsupported, run the polyfill
+            if (!rp.support()) {
+                // run once at least
+                rp.poly();
+
+                // rerun poly on an interval until onload
+                var run = w.setInterval(rp.poly, 500);
+                if (w.addEventListener) {
+                    w.addEventListener("load", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                } else if (w.attachEvent) {
+                    w.attachEvent("onload", function () {
+                        rp.poly();
+                        w.clearInterval(run);
+                    });
+                }
+            }
+            // commonjs
+            if (typeof exports !== "undefined") {
+                exports.loadCSS = loadCSS;
+            }
+            else {
+                w.loadCSS = loadCSS;
+            }
+        }(typeof global !== "undefined" ? global : this));
+    </script>
+    <script src="//cdn.staticfile.org/jquery/3.2.1/jquery.min.js" defer></script>
+    <script src="/scripts/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script>
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+</head>
+
+    
+        <body class="post-body">
+    
+    
+<header class="header">
+
+    <div class="read-progress"></div>
+    <div class="header-sidebar-menu">&#xe775;</div>
+    <!-- post页的toggle banner  -->
+    
+    <div class="banner">
+            <div class="blog-title">
+                <a href="/" >XShandow&#39;s Studio</a>
+            </div>
+            <div class="post-title">
+                <a href="#" class="post-name">[译]JCA参考指南(五)：代码示例</a>
+            </div>
+    </div>
+    
+    <a class="home-link" href=/>XShandow's Studio</a>
+</header>
+    <div class="wrapper">
+        <div class="site-intro" style=
+
+
+
+
+
+
+
+
+height:40vh;
+
+>
+    
+    <!-- 主页  -->
+    
+    
+    <!-- 404页  -->
+            
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+            [译]JCA参考指南(五)：代码示例
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+            
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页meta -->
+        
+            <!-- 文章页标签  -->
+            
+                <div class= post-intro-tags >
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags = "JCE">JCE</a>
+    
+</div>
+            
+            <div class="post-intro-meta">
+                <span class="post-intro-calander iconfont-archer">&#xe676;</span>
+                <span class="post-intro-time">2018/03/14</span>
+                
+                <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                    <span class="iconfont-archer">&#xe602;</span>
+                    <span id="busuanzi_value_page_pv"></span>
+                </span>
+                
+                <span class="shareWrapper">
+                    <span class="iconfont-archer shareIcon">&#xe71d;</span>
+                    <span class="shareText">Share</span>
+                    <ul class="shareList">
+                        <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                            <div class="share-qrcode"></div>
+                        </li>
+                        <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                        <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                        <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                        <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                    </ul>
+                </span>
+            </div>
+        
+    </div>
+</div>
+        <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+
+        <div class="container container-unloaded">
+            <main class="main post-page">
+    <article class="article-entry">
+        <p><strong>References:</strong></p>
+<ul>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html" target="_blank" rel="noopener">Java Cryptography Architecture (JCA) Reference Guide</a></li>
+<li><a href="http://blog.csdn.net/u012741741/article/details/79209984" target="_blank" rel="noopener">中文翻译参考</a></li>
+</ul>
+<h1 id="代码示例"><a href="#代码示例" class="headerlink" title="代码示例"></a>代码示例</h1><p>这里有一些简短的例子来说明使用一些JCA机制。另外，完整的工作示例可以在<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppD" target="_blank" rel="noopener">附录D</a>中找到。</p>
+<h2 id="计算MessageDigest对象"><a href="#计算MessageDigest对象" class="headerlink" title="计算MessageDigest对象"></a>计算MessageDigest对象</h2><p>首先，如下代码常见<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#MessageDigest" target="_blank" rel="noopener">消息摘要</a>对象：</p>
+<pre><code>MessageDigest sha = MessageDigest.getInstance(&quot;SHA-256&quot;);
+</code></pre><p>此方法将sha变量适当地分配给初始化的消息摘要对象。实现安全摘要算法(SHA-256)的实现，在国家标准与技术研究所(NIST)的<a href="http://csrc.nist.gov/publications/fips/index.html" target="_blank" rel="noopener">FIPS 180-2</a>文件进行定义。有关标准名称和算法的完整讨论，请参阅<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AppA" target="_blank" rel="noopener">附录A</a>。假设我们有三个字节数组，i1、i2、i3，这三个字节数组形成我们要计算的消息摘要的总输入。这个摘要(Hash)通过调用一下方法计算：</p>
+<pre><code>sha.update(i1);
+sha.update(i2);
+sha.update(i3);
+byte[] hash = sha.digest();
+</code></pre><p>一个等价的替代方法是：</p>
+<pre><code>sha.update(i1);
+sha.update(i2);
+byte[] hash = sha.digest(i3);
+</code></pre><p>在计算了消息摘要之后，消息摘要对象将自动重置并准备接收新数据并计算其摘要。丢失之前的所有状态(如，提供给update调用的数据)。</p>
+<p>一些实现通过clone可能支持中间哈希散列。假设我们要为下面计算单独的hash：</p>
+<ul>
+<li>i1</li>
+<li>i1 and i2</li>
+<li>i1, i2, and i3</li>
+</ul>
+<p>一种方式就是：</p>
+<pre><code>/* compute the hash for i1 */
+sha.update(i1);
+byte[] i1Hash = sha.clone().digest();
+
+/* compute the hash for i1 and i2 */
+sha.update(i2);
+byte[] i12Hash = sha.clone().digest();
+
+/* compute the hash for i1, i2 and i3 */
+sha.update(i3);
+byte[] i123hash = sha.digest();
+</code></pre><p>这段代码只有在SHA-256实现是可克隆的时候起作用。一些消息摘要的实现是可克隆的，而另外的不是。要确定是否可以克隆，尝试克隆MessageDigest对象和捕捉潜在的异常如下：</p>
+<pre><code>try {
+    // 尝试克隆， 为i1计算hash
+    sha.update(i1);
+    byte[] i1Hash = sha.clone().digest();
+    // ...
+    byte[] i123hash = sha.digest();
+} catch (CloneNotSupportedException cnse) {
+    // do something else, such as the code shown below
+}
+</code></pre><p>如果消息摘要是不可复制的，另一种不优雅的计算中间摘要方式是创建多个摘要。在这种情况下，必须预先知道要计算的中间摘要的数目：</p>
+<pre><code>MessageDigest md1 = MessageDigest.getInstance(&quot;SHA-256&quot;);
+MessageDigest md2 = MessageDigest.getInstance(&quot;SHA-256&quot;);
+MessageDigest md3 = MessageDigest.getInstance(&quot;SHA-256&quot;);
+
+byte[] i1Hash = md1.digest(i1);
+
+md2.update(i1);
+byte[] i12Hash = md2.digest(i2);
+
+md3.update(i1);
+md3.update(i2);
+byte[] i123Hash = md3.digest(i3);
+</code></pre><h2 id="产生密钥对"><a href="#产生密钥对" class="headerlink" title="产生密钥对"></a>产生密钥对</h2><p>本例中，我们要为DSA算法(Digital Signature Algorithm)创建一个公私钥对，并且在接下来的例子中使用这对密钥。我们创建2048位的密钥。我们不关心哪个Provider提供的算法实现。</p>
+<h3 id="创建密钥对生成器"><a href="#创建密钥对生成器" class="headerlink" title="创建密钥对生成器"></a>创建<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#KeyPairGenerator" target="_blank" rel="noopener">密钥对生成器</a></h3><p>第一步是为生成DSA算法密钥获取一个密钥对生成器：</p>
+<pre><code>KeyPairGenerator keyGen = KeyPairGenerator.getInstance(&quot;DSA&quot;);
+</code></pre><h3 id="初始化密钥对生成器"><a href="#初始化密钥对生成器" class="headerlink" title="初始化密钥对生成器"></a>初始化密钥对生成器</h3><p>下一步是初始化密钥对生成器。在大多数情况下，与算法无关的初始化是足够的，但在某些情况下，使用特定于算法的初始化。</p>
+<h4 id="算法无关的初始化"><a href="#算法无关的初始化" class="headerlink" title="算法无关的初始化"></a>算法无关的初始化</h4><p>所有密钥对生成器共享密钥大小和随机源的概念。KeyPairGenerator的初始化方法最少需要密钥大小参数。如果没有明确的规定随机源，将使用优先级最高的Provider提供的SecureRandom实现。所以通过调用如下方法产生2048位的密钥：</p>
+<pre><code>keyGen.initialize(2048);
+</code></pre><p>下面的代码演示了如何使用一个特定的、额外种子的SecureRandom对象：</p>
+<pre><code>SecureRandom random = SecureRandom.getInstance(&quot;DRBG&quot;, &quot;SUN&quot;);
+random.setSeed(userSeed);
+keyGen.initialize(2048, random);
+</code></pre><p>因为在调用上述算法独立初始化方法时没有指定其他参数，将由Provider决定如何处理与每个密钥相关联的算法特定参数(如果有的话)。Provider可以使用预先计算的参数值或可能产生新的值。</p>
+<h4 id="特定算法的初始化"><a href="#特定算法的初始化" class="headerlink" title="特定算法的初始化"></a>特定算法的初始化</h4><p>对于已经存在一组特定于算法的参数的情况(例如DSA中的“community parameters”)，有两个有<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/CryptoSpec.html#AlgorithmParameterSpec" target="_blank" rel="noopener">AlgorithmParameterspec</a>参数的初始化方法。假设你的密钥对生成器是为了“DSA”算法，并且你有一些特定DSA算法的参数，p、q和g,你将用这些参数生成你的密钥对。你可以执行下面的方法去初始化密钥对生成器(AlgorithmParameterSpec改成DSAParameterSpec)：</p>
+<pre><code>DSAParameterSpec dsaSpec = new DSAParameterSpec(p, q, g);
+keyGen.initialize(dsaSpec);
+</code></pre><p><strong>注意</strong>：参数p是长度为模长(位)的质数。所以你不需要调用别的方法去指定模长。</p>
+<h3 id="产生密钥对-1"><a href="#产生密钥对-1" class="headerlink" title="产生密钥对"></a>产生密钥对</h3><p>最后一步是实际产生密钥对。无论你使用哪种方式(算法独立和指定算法)初始化，生成密钥的代码是一样的：</p>
+<pre><code>KeyPair pair = keyGen.generateKeyPair();
+</code></pre><h2 id="使用产生的密钥对生成和验证签名"><a href="#使用产生的密钥对生成和验证签名" class="headerlink" title="使用产生的密钥对生成和验证签名"></a>使用产生的密钥对生成和验证签名</h2><p>接下来生成和验证签名的示例使用上面密钥对产生示例中生成的密钥对。</p>
+<h3 id="产生签名"><a href="#产生签名" class="headerlink" title="产生签名"></a>产生签名</h3><p>首先，我们创建Signature对象：</p>
+<pre><code>Signature dsa = Signature.getInstance(&quot;SHA256withDSA&quot;);
+</code></pre><p>接下来，使用产生密钥对示例中生成的密钥对，使用私钥初始化Signature对象，然后对数据字节数组签名。</p>
+<pre><code>/* 使用私钥初始化对象 */
+PrivateKey priv = pair.getPrivate();
+dsa.initSign(priv);
+
+/* Update and sign the data */
+dsa.update(data);
+byte[] sig = dsa.sign();
+</code></pre><h3 id="验证签名"><a href="#验证签名" class="headerlink" title="验证签名"></a>验证签名</h3><p>验证签名非常简单。(注意，这里使用产生密钥对示例中生成的密钥对)</p>
+<pre><code>/* 使用公钥初始化对象 */
+PublicKey pub = pair.getPublic();
+dsa.initVerify(pub);
+
+/* Update and verify the data */
+dsa.update(data);
+boolean verifies = dsa.verify(sig);
+System.out.println(&quot;signature verifies: &quot; + verifies);
+</code></pre><h2 id="通过密钥规范和KeyFactory产生-验证签名"><a href="#通过密钥规范和KeyFactory产生-验证签名" class="headerlink" title="通过密钥规范和KeyFactory产生/验证签名"></a>通过密钥规范和KeyFactory产生/验证签名</h2><p>假设，不是有一个公私钥对(例如，上面密钥对示例中产生的)，你只是有DSA私钥的组成：x(私钥),p(质数),q(子质数)和g(基数)。</p>
+<p>然后，假设你想使用私钥去数字签名一些数据，就是一些成为数据的字节数组。你需要调用下面的步骤，这些步骤说明创建密钥规范和使用密钥工厂通过密钥规范获得私钥(initSign需要使用私钥)：</p>
+<pre><code>DSAPrivateKeySpec dsaPrivKeySpec = new DSAPrivateKeySpec(x, p, q, g);
+
+KeyFactory keyFactory = KeyFactory.getInstance(&quot;DSA&quot;);
+PrivateKey privKey = keyFactory.generatePrivate(dsaPrivKeySpec);
+
+Signature sig = Signature.getInstance(&quot;SHA256withDSA&quot;);
+sig.initSign(privKey);
+sig.update(someData);
+byte[] signature = sig.sign();
+</code></pre><p>假设艾丽丝想使用你签名后的数据。为了让她这样做，并验证你的签名，你需要给她发送三部分：</p>
+<ol>
+<li>数据</li>
+<li>签名，以及</li>
+<li>用来签名数据的私钥对应的公钥</li>
+</ol>
+<p>你可以将数据存储到一个文件，签名存储到另一个文件，并且发送给艾丽丝。</p>
+<p>对应公钥，假设，如上面签名示例中，你有签名数据DSA私钥对应的DSA公钥的组成部分。然后你可以通过这些组成部分创建DSAPublicKeySpec：</p>
+<pre><code>DSAPublicKeySpec dsaPubKeySpec = new DSAPublicKeySpec(y, p, q, g);
+</code></pre><p>你仍需要传送密钥字节，所以将密钥也存到文件中。这样做，你可以先调用上面的例子已经建立DSA密钥工厂的generatepublic方法：</p>
+<pre><code>PublicKey pubKey = keyFactory.generatePublic(dsaPubKeySpec);
+</code></pre><p>然后，你可以通过下面的方法获取到密钥字节(编码后的)：</p>
+<pre><code>byte[] encKey = pubKey.getEncoded();
+</code></pre><p>现在，你可以将这些字节存储到文件，然后和包含数据和签名的文件一起发送给艾丽丝。</p>
+<p>现在，假设艾丽丝已经获得这些文件，并且将数据字节复制到名为data的字节数组中，从签名文件的签名字节复制到名为signature的字节数组中，从公钥文件的编码的公钥字节复制到名为encodedPubKey的字节数组中。</p>
+<p>艾丽丝可以执行下面的代码来验证签名。下面的代码也演示如何使用密钥工厂从编码的密钥格式来初始化DSA密钥(initVerify需要PublicKey)。</p>
+<pre><code>X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(encodedPubKey);
+
+KeyFactory keyFactory = KeyFactory.getInstance(&quot;DSA&quot;);
+PublicKey pubKey = keyFactory.generatePublic(pubKeySpec);
+
+Signature sig = Signature.getInstance(&quot;SHA256withDSA&quot;);
+sig.initVerify(pubKey);
+sig.update(data);
+sig.verify(signature);
+</code></pre><p><strong>注意</strong>：上面，艾丽丝需要从编码的密钥字段生成PublicKey，因为initVerify需要PublicKey类型。一旦她有了PublicKey,她可以使用KeyFactory的getKeySpec方法将PublicKey转换为DSAPublicKeySpec，所以如果需要它可以获得组成部分，如下：</p>
+<pre><code>DSAPublicKeySpec dsaPubKeySpec = (DSAPublicKeySpec)keyFactory.getKeySpec(pubKey, DSAPublicKeySpec.class)
+</code></pre><p>现在，她可以通过DSAPublicKeySpec类的“get”方法(getY, getP, getQ, and getG)获取到DSA公钥的组成部分y、p、q和g。</p>
+<h2 id="确定两个密钥是否相等"><a href="#确定两个密钥是否相等" class="headerlink" title="确定两个密钥是否相等"></a>确定两个密钥是否相等</h2><p>很多情况下，你想知道两个密钥是否相等；然而，默认的方法java.lang.Object.equals可能不会得到希望的结果。大多数provider无关的方法是比较编码后的密钥。如果比较不合适(例如，比较RSAPrivateKey和RSAPrivateCrtKey)，你需要比较每个组成部分。下面的代码演示了这种想法：</p>
+<pre><code>static boolean keysEqual(Key key1, Key key2) {
+    if (key1.equals(key2)) {
+        return true;
+    }
+
+    if (Arrays.equals(key1.getEncoded(), key2.getEncoded())) {
+        return true;
+    }
+
+
+    // 不同类型的密钥的代码，下面检查RSAPrivateKey和RSAPrivateCrtKey是否相同
+
+    // if ((key1 instanceof RSAPrivateKey) &amp;&amp;
+    //     (key2 instanceof RSAPrivateKey)) {
+    //     if ((key1.getModulus().equals(key2.getModulus())) &amp;&amp;
+    //         (key1.getPrivateExponent().equals(
+    //                                      key2.getPrivateExponent()))) {
+    //         return true;
+    //     }
+    // }
+
+    return false;
+}
+</code></pre><h2 id="读取Base64编码的证书"><a href="#读取Base64编码的证书" class="headerlink" title="读取Base64编码的证书"></a>读取Base64编码的证书</h2><p>下面的例子读取Base64编码证书的文件，证书开始于</p>
+<pre><code>-----BEGIN CERTIFICATE-----
+</code></pre><p>结束于</p>
+<pre><code>-----END CERTIFICATE-----
+</code></pre><p>我们从FileInputStream (不支持mark和reset) 转换为ByteArrayInputStream (支持这些方法),所以每次generateCertificate仅产生一个证书，并且输入流读取位置指向文件中的下一个证书：</p>
+<pre><code>FileInputStream fis = new FileInputStream(filename);
+BufferedInputStream bis = new BufferedInputStream(fis);
+
+CertificateFactory cf = CertificateFactory.getInstance(&quot;X.509&quot;);
+
+while (bis.available() &gt; 0) {
+    Certificate cert = cf.generateCertificate(bis);
+    System.out.println(cert.toString());
+}
+</code></pre><h2 id="解析证书应答"><a href="#解析证书应答" class="headerlink" title="解析证书应答"></a>解析证书应答</h2><p>下面的示例解析存储在文件中的PKCS-7格式的证书应答，并且获从里面获取到所有的证书：</p>
+<pre><code>FileInputStream fis = new FileInputStream(filename);
+CertificateFactory cf = CertificateFactory.getInstance(&quot;X.509&quot;);
+Collection c = cf.generateCertificates(fis);
+Iterator i = c.iterator();
+while (i.hasNext()) {
+    Certificate cert = (Certificate)i.next();
+    System.out.println(cert);
+}
+</code></pre><h2 id="使用加密"><a href="#使用加密" class="headerlink" title="使用加密"></a>使用加密</h2><p>本节让用户通过生成密钥、创建和初始化一个cipher对象、加密一个文件、然后解密它的过程。本例中使用Advanced Encryption Standard (AES)算法。</p>
+<h3 id="生成密钥"><a href="#生成密钥" class="headerlink" title="生成密钥"></a>生成密钥</h3><p>为了生成AES密钥，我们需要实例化化AES的KeyGenerator。我们不指定Provider，因为我们不关心实际的AES密钥产生实现。由于我们没有初始化KeyGenerator,系统提供的随机源和默认的密钥大小会用来产生AES密钥：</p>
+<pre><code>KeyGenerator keygen = KeyGenerator.getInstance(&quot;AES&quot;);
+SecretKey aesKey = keygen.generateKey();
+</code></pre><p>密钥产生之后，同一个KeyGenerator对象可以重复使用产生之后的密钥。</p>
+<h3 id="产生Cipher"><a href="#产生Cipher" class="headerlink" title="产生Cipher"></a>产生Cipher</h3><p>下一步是产生Cipher实例。要做到这点，我们使用Cipher类的getInstanse工厂方法。我们必须指定需要转换的名称，包类下面内容，以(/)分割：</p>
+<ul>
+<li>算法名称</li>
+<li>模式(可选)</li>
+<li>补丁模式(可选)</li>
+</ul>
+<p>本例中，我们创建CBC模式、PKCS-5补丁的AES加密。我们不指定provider，因为我们不关心请求转换的实际实现。</p>
+<p>标准的AES名称是“AES”，密码块链接模式的标准名称是“CBC”，PKCS5模式的补丁的标准名称是”PKCS5Padding”:</p>
+<pre><code>Cipher aesCipher;
+
+// Create the cipher
+aesCipher = Cipher.getInstance(&quot;AES/ECB/PKCS5Padding&quot;);
+</code></pre><p>我们使用上面产生的AES密钥去初始化加密用的Cipher对象：</p>
+<pre><code>// Initialize the cipher for encryption
+aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
+
+// 明文
+byte[] cleartext = &quot;This is just an example&quot;.getBytes();
+
+// Encrypt the cleartext
+byte[] ciphertext = aesCipher.doFinal(cleartext);
+
+// Initialize the same cipher for decryption
+aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
+
+// Decrypt the ciphertext
+byte[] cleartext1 = aesCipher.doFinal(ciphertext);
+</code></pre><p>cleartext和cleartext1完全相同。</p>
+<h2 id="使用基于密码的加密"><a href="#使用基于密码的加密" class="headerlink" title="使用基于密码的加密"></a>使用基于密码的加密</h2><p>本例中，我们提示用户输入一个密码，我们从中获得一个加密密钥。</p>
+<p>逻辑上在java.lang.String类型中计算和存储密码。然而，这里警告：String类型对象是不可更改的，例如没有方法允许你更改(覆盖)或把String类型的内容清零。此特性使字符串对象不适合存储安全敏感信息，如用户密码。您应该总是在char数组中收集和存储安全敏感信息。</p>
+<p>由于这个原因，javax.crypto.spec.PBEKeySpec保存(返回)char数组的密码。查看附录D代码中的ReadPassword类，从输入流中读取字符数组密码的一种可能的方式。</p>
+<p>为了使用pkcs5中定义的基于密码的加密(PBE)，我们必须指定一个盐和一个迭代次数。用于加密的相同的盐和迭代计数必须用于解密。新的PBE算法使用至少1000个迭代次数。</p>
+<pre><code>PBEKeySpec pbeKeySpec;
+PBEParameterSpec pbeParamSpec;
+SecretKeyFactory keyFac;
+
+// Salt
+byte[] salt = new SecureRandom().nextBytes(salt);
+
+// Iteration count
+int count = 1000;
+
+// Create PBE parameter set
+pbeParamSpec = new PBEParameterSpec(salt, count);
+
+// 提示用户输入密码。
+// 收集用户的密码字符数组，并使用PBE密钥工厂把它变成一个密钥对象，。
+char[] password = System.console.readPassword(&quot;Enter encryption password: &quot;);
+pbeKeySpec = new PBEKeySpec(password);
+keyFac = SecretKeyFactory.getInstance(&quot;PBEWithHmacSHA256AndAES_256&quot;);
+SecretKey pbeKey = keyFac.generateSecret(pbeKeySpec);
+
+// Create PBE Cipher
+Cipher pbeCipher = Cipher.getInstance(&quot;PBEWithHmacSHA256AndAES_256&quot;);
+
+// Initialize PBE Cipher with key and parameters
+pbeCipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParamSpec);
+
+// Our cleartext
+byte[] cleartext = &quot;This is another example&quot;.getBytes();
+
+// Encrypt the cleartext
+byte[] ciphertext = pbeCipher.doFinal(cleartext);
+</code></pre><h2 id="使用密钥协商"><a href="#使用密钥协商" class="headerlink" title="使用密钥协商"></a>使用密钥协商</h2><p>请参阅附录D示例程序，在2和3方之间使用Diffie-Hellman算法的密钥交换。</p>
+
+    </article>
+    <!-- 前后页  -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href= "/2018/03/JCA Guide Charpter6 Appendix.html" title= [译]JCA参考指南(六)：附录 >
+                    <div class="nextTitle">[译]JCA参考指南(六)：附录</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" title= [译]JCA参考指南(四)：如何使应用程序“免于”加密限制 >
+                    <div class="prevTitle">[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- 评论插件 -->
+    <!-- 来必力City版安装代码 -->
+
+<!-- City版安装代码已完成 -->
+    
+    
+    <!--PC版-->
+
+    <!--PC版-->
+
+
+    
+    <!-- 评论 -->
+</main>
+            <!-- profile -->
+            
+        </div>
+        <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+    <div class="social">
+        
+    
+        
+            
+                <a href="mailto:978650866@qq.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/XShandow" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+    </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- 不蒜子  -->
+    
+    <div class="busuanzi-container">
+        <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span>
+        </span>
+    </div>
+    
+</footer>
+    </div>
+    <!-- toc -->
+    
+    <div class="toc-wrapper" style=
+    
+
+
+
+
+
+
+
+top:40vh;
+
+    >
+        <div class="toc-catalog">
+            <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+        </div>
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#代码示例"><span class="toc-number">1.</span> <span class="toc-text">代码示例</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#计算MessageDigest对象"><span class="toc-number">1.1.</span> <span class="toc-text">计算MessageDigest对象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#产生密钥对"><span class="toc-number">1.2.</span> <span class="toc-text">产生密钥对</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#创建密钥对生成器"><span class="toc-number">1.2.1.</span> <span class="toc-text">创建密钥对生成器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#初始化密钥对生成器"><span class="toc-number">1.2.2.</span> <span class="toc-text">初始化密钥对生成器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#算法无关的初始化"><span class="toc-number">1.2.2.1.</span> <span class="toc-text">算法无关的初始化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#特定算法的初始化"><span class="toc-number">1.2.2.2.</span> <span class="toc-text">特定算法的初始化</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#产生密钥对-1"><span class="toc-number">1.2.3.</span> <span class="toc-text">产生密钥对</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#使用产生的密钥对生成和验证签名"><span class="toc-number">1.3.</span> <span class="toc-text">使用产生的密钥对生成和验证签名</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#产生签名"><span class="toc-number">1.3.1.</span> <span class="toc-text">产生签名</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#验证签名"><span class="toc-number">1.3.2.</span> <span class="toc-text">验证签名</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#通过密钥规范和KeyFactory产生-验证签名"><span class="toc-number">1.4.</span> <span class="toc-text">通过密钥规范和KeyFactory产生/验证签名</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#确定两个密钥是否相等"><span class="toc-number">1.5.</span> <span class="toc-text">确定两个密钥是否相等</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#读取Base64编码的证书"><span class="toc-number">1.6.</span> <span class="toc-text">读取Base64编码的证书</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解析证书应答"><span class="toc-number">1.7.</span> <span class="toc-text">解析证书应答</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#使用加密"><span class="toc-number">1.8.</span> <span class="toc-text">使用加密</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#生成密钥"><span class="toc-number">1.8.1.</span> <span class="toc-text">生成密钥</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#产生Cipher"><span class="toc-number">1.8.2.</span> <span class="toc-text">产生Cipher</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#使用基于密码的加密"><span class="toc-number">1.9.</span> <span class="toc-text">使用基于密码的加密</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#使用密钥协商"><span class="toc-number">1.10.</span> <span class="toc-text">使用密钥协商</span></a></li></ol></li></ol>
+    </div>
+    
+    <div class="back-top iconfont-archer">&#xe639;</div>
+    <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+          <div class="sidebar-panel-archives">
+    <!-- 在ejs中将archive按照时间排序 -->
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div class="total-archive"> Total : 11 </div>
+    
+    <div class="post-archive">
+    
+    
+    
+    
+    <div class="archive-year"> 2018 </div>
+    <ul class="year-list">
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/19</span><a class="archive-post-title" href= "/2018/03/JCE Provider如何实现.html" >[译]如何在JCA中实现Provider</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/15</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter6 Appendix.html" >[译]JCA参考指南(六)：附录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter5 CodeExamples.html" >[译]JCA参考指南(五)：代码示例</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter4 Cryptographic Restrictions.html" >[译]JCA参考指南(四)：如何使应用程序“免于”加密限制</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter3 JCA in SSL TLS.html" >[译]JCA参考指南(三)：如何SSL/TLS实现中使用JCA</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter2 Core Class and Interfaces.html" >[译]JCA参考指南(二)：核心类和接口</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/05</span><a class="archive-post-title" href= "/2018/03/JCA Guide Charpter1 Introduction.html" >[译]JCA参考指南(一)：介绍</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/04</span><a class="archive-post-title" href= "/2018/03/MiJia LED 写字灯.html" >MIJIA 小米生态链LED写字灯开箱测评</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span><a class="archive-post-title" href= "/2018/03/Spring Boot and JavaFX8.html" >[译]Spring Boot and JavaFX</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Hexo Problem.html" >Hexo安装踩坑记录</a>
+        </li>
+    
+    
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/02</span><a class="archive-post-title" href= "/2018/03/Logitech  K800.html" >Logitech K800 键盘开箱以及使用感受</a>
+        </li>
+    
+    </div>
+  </div>
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+    
+        <span class="sidebar-tag-name" data-tags="踩坑"><span class="iconfont-archer">&#xe606;</span>踩坑</span>
+    
+        <span class="sidebar-tag-name" data-tags="JCE"><span class="iconfont-archer">&#xe606;</span>JCE</span>
+    
+        <span class="sidebar-tag-name" data-tags="测评"><span class="iconfont-archer">&#xe606;</span>测评</span>
+    
+        <span class="sidebar-tag-name" data-tags="JavaFX"><span class="iconfont-archer">&#xe606;</span>JavaFX</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+    缺失模块。<br/>
+    1、请确保node版本大于6.2<br/>
+    2、在博客根目录（注意不是archer根目录）执行以下命令：<br/>
+    <span style="color: #f75357; font-size: 1rem; line-height: 2rem;">npm i hexo-generator-json-content --save</span><br/>
+    3、在根目录_config.yml里添加配置：
+    <pre style="color: #787878; font-size: 0.6rem;">
+jsonContent:
+  meta: false
+  pages: false
+  posts:
+    title: true
+    date: true
+    path: true
+    text: false
+    raw: false
+    content: false
+    slug: false
+    updated: false
+    comments: false
+    link: false
+    permalink: false
+    excerpt: false
+    categories: true
+    tags: true</pre>
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="记录"><span class="iconfont-archer">&#xe60a;</span>记录</span>
+    
+        <span class="sidebar-category-name" data-categories="Java"><span class="iconfont-archer">&#xe60a;</span>Java</span>
+    
+        <span class="sidebar-category-name" data-categories="生活"><span class="iconfont-archer">&#xe60a;</span>生活</span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+    </div>
+</div> 
+    <script>
+    var siteMeta = {
+        root: '/',
+        author: 'XShandow'
+    }
+</script>
+    <!-- busuanzi  -->
+    
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+    <!-- CNZZ  -->
+    
+    </div>
+    <!-- async load share.js -->
+    
+        <script src="/scripts/share.js" async></script>    
+    
+    </body>
+</html>
+
+
